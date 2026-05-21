@@ -4,7 +4,9 @@ from types import TracebackType
 
 from datagokr.config import DataGoKrConfig
 from datagokr.services import (
+    AgriWeatherService,
     CulturalFestivalService,
+    KwaterSluiceService,
     MuseumArtGalleryService,
     ParkingLotService,
     TouristAttractionService,
@@ -32,6 +34,8 @@ class DataGoKrClient:
         self.parking = ParkingLotService(transport=self._transport)
         self.tourist_attraction = TouristAttractionService(transport=self._transport)
         self.festival = CulturalFestivalService(transport=self._transport)
+        self.agri_weather = AgriWeatherService(transport=self._transport)
+        self.kwater_sluice = KwaterSluiceService(transport=self._transport)
         self.closed = False
 
     def __enter__(self) -> DataGoKrClient:
@@ -48,4 +52,3 @@ class DataGoKrClient:
     def close(self) -> None:
         self._transport.close()
         self.closed = True
-

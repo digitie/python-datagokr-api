@@ -10,6 +10,11 @@ Python client로 감싼 라이브러리입니다.
 - 전국관광지정보표준데이터: `tn_pubr_public_trrsrt_api`
 - 전국문화축제표준데이터: `tn_pubr_public_cltur_fstvl_api`
 
+TripMate 문서에서 별도 `python-*-api` 소유가 없는 data.go.kr OpenAPI도 함께 둡니다.
+
+- 농촌진흥청 국립농업과학원 농업기상 관측지점 상세정보: `1390802/AgriWeather/getObsrSpotList`
+- 한국수자원공사 수문 운영 정보: `B500001/dam/sluicePresentCondition/*`
+
 ## Quick Start
 
 ```python
@@ -20,13 +25,7 @@ with DataGoKrClient() as client:
     print(page.total_count, page.items[0].fclty_nm)
 ```
 
-인증키는 `DataGoKrClient(api_key="...")`로 직접 넘기거나 아래 환경변수 중 하나에
-설정합니다.
-
-- `DATAGOKR_API_KEY`
-- `DATA_GO_KR_SERVICE_KEY`
-- `PUBLIC_DATA_SERVICE_KEY`
-- `SERVICE_KEY`
+인증키는 `DataGoKrClient(api_key="...")`로 직접 넘기거나 `DATA_GO_KR_SERVICE_KEY`
+환경변수에 설정합니다. data.go.kr 엔드포인트 서비스키 환경변수는 이 이름으로 통일합니다.
 
 `.env`는 저장소에 포함하지 않습니다.
-

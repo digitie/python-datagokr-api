@@ -58,6 +58,27 @@ class StandardItem(DataGoKrModel):
         return dict(value) if isinstance(value, dict) else {}
 
 
+class OpenApiPage(DataGoKrModel, Generic[T]):
+    """Uniform container for non-standard data.go.kr OpenAPI list responses."""
+
+    total_count: int = 0
+    page_no: int = 1
+    num_of_rows: int = 10
+    items: list[T] = Field(default_factory=list)
+
+    @property
+    def total_pages(self) -> int:
+        if self.num_of_rows <= 0:
+            return 0
+        return (self.total_count + self.num_of_rows - 1) // self.num_of_rows
+
+    def __iter__(self) -> Iterator[T]:  # type: ignore[override]
+        return iter(self.items)
+
+    def __len__(self) -> int:
+        return len(self.items)
+
+
 class PublicMuseumArtGallery(StandardItem):
     fclty_nm: str | None = Field(default=None, alias="fcltyNm")
     fclty_type: str | None = Field(default=None, alias="fcltyType")
@@ -167,3 +188,29 @@ class PublicCulturalFestival(StandardItem):
     reference_date: date | None = Field(default=None, alias="referenceDate")
     instt_code: str | None = None
     instt_nm: str | None = None
+
+
+class AgriWeatherObservationStation(StandardItem):
+    no: int | None = Field(default=None, alias="No")
+    obsr_spot_code: str | None = Field(default=None, alias="Obsr_Spot_Code")
+    obsr_spot_nm: str | None = Field(default=None, alias="Obsr_Spot_Nm")
+    do_se_code: str | None = Field(default=None, alias="Do_Se_Code")
+    mgc_code: str | None = Field(default=None, alias="Mgc_Code")
+    clmt_zone_code: str | None = Field(default=None, alias="Clmt_Zone_Code")
+    comm_mthd_code: str | None = Field(default=None, alias="Comm_Mthd_Code")
+    instl_la: float | None = Field(default=None, alias="Instl_La")
+    instl_lo: float | None = Field(default=None, alias="Instl_Lo")
+    instl_al: float | None = Field(default=None, alias="Instl_Al")
+    instl_adres: str | None = Field(default=None, alias="Instl_Adres")
+    obsr_begin_datetm: date | None = Field(default=None, alias="Obsr_Begin_Datetm")
+
+
+class KwaterSluiceRecord(StandardItem):
+    obsrdt: str | None = None
+    lowlevel: float | None = None
+    rf: float | None = None
+    inflowqy: float | None = None
+    totdcwtrqy: float | None = None
+    rsvwtqy: float | None = None
+    rsvwtrt: float | None = None
+    damcode: str | None = None

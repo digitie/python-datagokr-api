@@ -10,16 +10,7 @@ pytestmark = pytest.mark.live
 
 
 def _api_key() -> str | None:
-    for name in (
-        "DATAGOKR_API_KEY",
-        "DATA_GO_KR_SERVICE_KEY",
-        "PUBLIC_DATA_SERVICE_KEY",
-        "SERVICE_KEY",
-    ):
-        value = os.getenv(name)
-        if value:
-            return value
-    return None
+    return os.getenv("DATA_GO_KR_SERVICE_KEY")
 
 
 @pytest.mark.parametrize(
@@ -43,4 +34,3 @@ def test_live_standard_endpoint_returns_items(service_name: str, name_attr: str)
     assert page.total_count >= len(page.items)
     assert page.items
     assert getattr(page.items[0], name_attr)
-
