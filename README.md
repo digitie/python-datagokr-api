@@ -1,5 +1,9 @@
 # python-datagokr-api
 
+## 문서 언어 정책
+
+이 저장소의 모든 Markdown/RST 문서는 한글로 작성합니다. 공식 API 필드명, 코드 식별자, 명령어, URL, provider 원문처럼 그대로 보존해야 하는 값만 영어를 유지합니다. 새 문서나 기존 문서를 수정할 때도 이 규칙을 우선합니다.
+
 TripMate에서 쓰는 공공데이터포털(data.go.kr) 표준데이터 Open API를 작은 typed
 Python client로 감싼 라이브러리입니다.
 
