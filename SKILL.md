@@ -37,7 +37,7 @@ wsl .venv/bin/mypy
 wsl .venv/bin/python -m pytest
 ```
 
-에이전트 작업은 `F:\dev\python-datagokr-api` 작업공간을 직접 이용하며, `git switch -c agent/<topic> main`으로 새 브랜치를 따서 진행한다. 작업 시작/변경마다 `codegraph sync`를 실행해 인덱스를 갱신한다.
+에이전트 작업은 고정 worktree에서 진행한다. ChatGPT Codex는 `F:\dev\python-datagokr-api-codex`, Claude Code는 `F:\dev\python-datagokr-api-claude`, Google Antigravity 2.0은 `F:\dev\python-datagokr-api-antigravity`를 사용한다. 작업 시작/변경마다 `git switch -c agent/<topic> main`으로 새 브랜치를 따고 `codegraph sync`를 실행해 인덱스를 최신화한다.
 
 ## 3. 디렉토리 지도
 

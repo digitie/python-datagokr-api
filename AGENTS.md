@@ -35,7 +35,7 @@ PC 개발은 Windows 호스트에서 진행하되, 테스트 및 린팅 검증�
 
 - **`dist/` 혹은 빌드 산출물 비커밋**: 이 프로젝트는 소스 코드로만 배포하므로 빌드 배포본을 git에 커밋하지 않는다.
 - **GitHub Actions 비사용**: 품질 게이트는 PR 머지 직전 작업자가 로컬 WSL에서 직접 실행한다.
-- **에이전트별 CodeGraph 연동**: 모든 에이전트는 로컬 `F:\dev\python-datagokr-api` 디렉토리에서 CodeGraph 인덱스를 최신화(`codegraph sync`)하여 유지한다.
+- **에이전트별 고정 worktree**: ChatGPT Codex는 `F:\dev\python-datagokr-api-codex`, Claude Code는 `F:\dev\python-datagokr-api-claude`, Google Antigravity 2.0은 `F:\dev\python-datagokr-api-antigravity`를 고정 worktree로 사용한다. 작업마다 브랜치만 새로 만들고, CodeGraph는 worktree마다 1회 `codegraph init -i` 후 `codegraph sync`로 유지한다.
 
 작업 전에 반드시 다음을 읽는다:
 
