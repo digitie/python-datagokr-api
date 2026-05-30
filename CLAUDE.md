@@ -11,7 +11,7 @@ Pydantic v2와 httpx 기반의 공공데이터포털(data.go.kr) Typed Python �
 
 ### 현재 작업
 
-- (없음) — maplibre-vworld-js 프로젝트 스타일 및 MCP 설정을 가져와 적용하고 PR 작성 및 머지/리모트 푸시 수행 중.
+- (없음) — 에이전트별 worktree(python-datagokr-api-*) 설정 및 codegraph init 완료.
 
 ### 잔존 기술 부채
 
@@ -19,13 +19,13 @@ Pydantic v2와 httpx 기반의 공공데이터포털(data.go.kr) Typed Python �
 
 ### 브랜치 정리
 
-- `chore/adopt-vworld-style-and-mcp` — 현재 작업 중인 브랜치.
+- `chore/configure-agent-worktrees` — 현재 작업 중인 브랜치.
 
 ## 에이전트 환경 및 CodeGraph
 
-- 모든 에이전트(Antigravity, Claude, Codex)는 단일 작업공간인 `F:\dev\python-datagokr-api`를 직접 이용한다.
-- 작업 시작 시 `git switch -c agent/<topic> main`으로 feature 브랜치를 딴다.
-- CodeGraph는 루트 디렉토리에서 `codegraph sync`를 주기적으로 실행하여 최신 구조 정보를 동기화한다.
+- ChatGPT Codex는 `F:\dev\python-datagokr-api-codex`, Claude Code는 `F:\dev\python-datagokr-api-claude`, Google Antigravity 2.0은 `F:\dev\python-datagokr-api-antigravity`를 고정 worktree로 사용한다.
+- 작업 시작 시 `git switch -c agent/<topic> main`으로 feature 브랜치를 딴 후 진행한다.
+- CodeGraph는 worktree마다 1회 `codegraph init -i`로 초기화하고 이후에는 `codegraph sync`를 실행해 최신화한다.
 - MCP 설정은 `.gemini/mcp.json` 및 루트의 `antigravity.json`, `claude.json`, `codex.json`, `.codex/config.toml`에 각각 정리되어 있다.
 
 ## 로컬 개발 환경
