@@ -38,6 +38,41 @@ class DataGoKrClient:
         self.kwater_sluice = KwaterSluiceService(transport=self._transport)
         self.closed = False
 
+    def save_to_local(self, file_path: str, content: bytes) -> None:
+        """Save content to the local filesystem."""
+        from datagokr.storage import save_to_local as _save_local
+
+        _save_local(file_path, content)
+
+    def save_to_rustfs(
+        self,
+        file_path: str,
+        content: bytes,
+        *,
+        bucket: str | None = None,
+        object_key: str | None = None,
+        region_name: str | None = None,
+        endpoint_url: str | None = None,
+        access_key_id: str | None = None,
+        secret_access_key: str | None = None,
+    ) -> None:
+        """Save content to both local filesystem and RustFS object storage.
+
+        Falls back to client config values for unspecified S3 options.
+        """
+        from datagokr.storage import save_to_rustfs as _save_rustfs
+
+        _save_rustfs(
+            file_path,
+            content,
+            bucket=(bucket or self.config.rustfs_bucket),
+            object_key=object_key,
+            region_name=(region_name or self.config.rustfs_region_name),
+            endpoint_url=(endpoint_url or self.config.rustfs_endpoint_url),
+            access_key_id=(access_key_id or self.config.rustfs_access_key_id),
+            secret_access_key=(secret_access_key or self.config.rustfs_secret_access_key),
+        )
+
     def __enter__(self) -> DataGoKrClient:
         return self
 
@@ -52,3 +87,4 @@ class DataGoKrClient:
     def close(self) -> None:
         self._transport.close()
         self.closed = True
+

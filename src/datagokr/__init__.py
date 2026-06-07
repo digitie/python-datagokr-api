@@ -28,6 +28,7 @@ from datagokr.services import (
     ParkingLotService,
     TouristAttractionService,
 )
+from datagokr.storage import save_to_local, save_to_rustfs
 
 __version__ = "0.1.0"
 PROVIDER_NAME = "python-datagokr-api"
@@ -59,4 +60,7 @@ __all__ = [
     "StandardPage",
     "TouristAttractionService",
     "__version__",
+    "save_to_local",
+    "save_to_rustfs",
 ]
+
