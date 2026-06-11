@@ -126,9 +126,10 @@ class PublicParkingLot(StandardItem):
     holiday_oper_open_hhmm: str | None = Field(default=None, alias="holidayOperOpenHhmm")
     holiday_close_open_hhmm: str | None = Field(default=None, alias="holidayCloseOpenHhmm")
     parkingchrge_info: str | None = Field(default=None, alias="parkingchrgeInfo")
-    basic_time: int | None = Field(default=None, alias="basicTime")
+    # 시간 필드는 live 데이터에 분수값이 존재한다 (예: addUnitTime='0.5' — #6).
+    basic_time: float | None = Field(default=None, alias="basicTime")
     basic_charge: int | None = Field(default=None, alias="basicCharge")
-    add_unit_time: int | None = Field(default=None, alias="addUnitTime")
+    add_unit_time: float | None = Field(default=None, alias="addUnitTime")
     add_unit_charge: int | None = Field(default=None, alias="addUnitCharge")
     day_cmmtkt_adj_time: float | None = Field(default=None, alias="dayCmmtktAdjTime")
     day_cmmtkt: int | None = Field(default=None, alias="dayCmmtkt")
