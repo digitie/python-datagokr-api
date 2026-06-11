@@ -99,6 +99,41 @@ def test_parking_service_accepts_xml_response() -> None:
     assert transport.calls[0][0] == PARKING_LOT_ENDPOINT
 
 
+def test_parking_service_parses_fractional_time_fields() -> None:
+    # live 실측(2026-06-11, #6): addUnitTime이 '0.5' 같은 분수로 오는 row가 있다.
+    transport = FakeTransport(
+        b"""
+        {
+          "response": {
+            "header": {"resultCode": "00", "resultMsg": "NORMAL_CODE"},
+            "body": {
+              "items": [
+                {
+                  "prkplceNo": "P-2",
+                  "prkplceNm": "Fraction Parking",
+                  "basicTime": "0.5",
+                  "addUnitTime": "0.5",
+                  "addUnitCharge": "500"
+                }
+              ],
+              "totalCount": 1,
+              "pageNo": 1,
+              "numOfRows": 100
+            }
+          }
+        }
+        """
+    )
+    service = ParkingLotService(transport=transport)
+
+    page = service.list(page_no=1, num_of_rows=100)
+
+    item = page.items[0]
+    assert item.basic_time == 0.5
+    assert item.add_unit_time == 0.5
+    assert item.add_unit_charge == 500
+
+
 def test_iter_pages_stops_at_max_pages() -> None:
     body = b"""
     {
