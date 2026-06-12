@@ -134,6 +134,47 @@ def test_parking_service_parses_fractional_time_fields() -> None:
     assert item.add_unit_charge == 500
 
 
+def test_parking_service_coerces_free_form_charge_fields() -> None:
+    # live 실측(2026-06-12, #8): addUnitCharge가 '200+400' 같은 자유 표기로 오는 row가 있다.
+    # 산술 평가는 의미 왜곡이므로 비숫자는 None, 원본은 raw에 보존된다.
+    transport = FakeTransport(
+        b"""
+        {
+          "response": {
+            "header": {"resultCode": "00", "resultMsg": "NORMAL_CODE"},
+            "body": {
+              "items": [
+                {
+                  "prkplceNo": "P-3",
+                  "prkplceNm": "Free Form Parking",
+                  "prkcmprt": 42,
+                  "basicCharge": " 500 ",
+                  "addUnitCharge": "200+400",
+                  "dayCmmtkt": "10000",
+                  "monthCmmtkt": null
+                }
+              ],
+              "totalCount": 1,
+              "pageNo": 1,
+              "numOfRows": 100
+            }
+          }
+        }
+        """
+    )
+    service = ParkingLotService(transport=transport)
+
+    page = service.list(page_no=1, num_of_rows=100)
+
+    item = page.items[0]
+    assert item.add_unit_charge is None
+    assert item.basic_charge == 500
+    assert item.prkcmprt == 42
+    assert item.day_cmmtkt == 10000
+    assert item.month_cmmtkt is None
+    assert item.raw["addUnitCharge"] == "200+400"
+
+
 def test_iter_pages_stops_at_max_pages() -> None:
     body = b"""
     {
