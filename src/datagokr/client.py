@@ -9,8 +9,10 @@ from datagokr.services import (
     KwaterSluiceService,
     MuseumArtGalleryService,
     ParkingLotService,
+    SpecialStreetService,
     TouristAttractionService,
 )
+from datagokr.services.file_data import FileDataService
 from datagokr.transport import SyncHttpxTransport
 
 
@@ -34,6 +36,8 @@ class DataGoKrClient:
         self.parking = ParkingLotService(transport=self._transport)
         self.tourist_attraction = TouristAttractionService(transport=self._transport)
         self.festival = CulturalFestivalService(transport=self._transport)
+        self.special_street = SpecialStreetService(transport=self._transport)
+        self.file_data = FileDataService(transport=self._transport)
         self.agri_weather = AgriWeatherService(transport=self._transport)
         self.kwater_sluice = KwaterSluiceService(transport=self._transport)
         self.closed = False

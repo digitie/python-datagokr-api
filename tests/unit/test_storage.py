@@ -132,6 +132,9 @@ def test_client_save_to_rustfs_delegates_with_config(
         # Override config manually for testing
         object.__setattr__(client, "config", config)
 
+        assert client.file_data.datasets()
+        assert client.special_street.endpoint == "tn_pubr_public_area_spcliz_stret_api"
+
         client.save_to_local(str(file_path), content)
         assert file_path.exists()
         assert file_path.read_bytes() == content

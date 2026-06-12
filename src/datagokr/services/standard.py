@@ -13,6 +13,7 @@ from datagokr.models import (
     PublicCulturalFestival,
     PublicMuseumArtGallery,
     PublicParkingLot,
+    PublicSpecialStreet,
     PublicTouristAttraction,
     StandardItem,
     StandardPage,
@@ -23,6 +24,7 @@ MUSEUM_ART_GALLERY_ENDPOINT = "tn_pubr_public_museum_artgr_info_api"
 PARKING_LOT_ENDPOINT = "tn_pubr_prkplce_info_api"
 TOURIST_ATTRACTION_ENDPOINT = "tn_pubr_public_trrsrt_api"
 CULTURAL_FESTIVAL_ENDPOINT = "tn_pubr_public_cltur_fstvl_api"
+SPECIAL_STREET_ENDPOINT = "tn_pubr_public_area_spcliz_stret_api"
 
 T = TypeVar("T", bound=StandardItem)
 
@@ -131,6 +133,15 @@ class TouristAttractionService(StandardOpenApiService[PublicTouristAttraction]):
             transport=transport,
             endpoint=TOURIST_ATTRACTION_ENDPOINT,
             model_type=PublicTouristAttraction,
+        )
+
+
+class SpecialStreetService(StandardOpenApiService[PublicSpecialStreet]):
+    def __init__(self, *, transport: SyncTransport) -> None:
+        super().__init__(
+            transport=transport,
+            endpoint=SPECIAL_STREET_ENDPOINT,
+            model_type=PublicSpecialStreet,
         )
 
 

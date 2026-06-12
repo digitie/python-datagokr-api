@@ -9,10 +9,12 @@ from datagokr.services import (
     CULTURAL_FESTIVAL_ENDPOINT,
     MUSEUM_ART_GALLERY_ENDPOINT,
     PARKING_LOT_ENDPOINT,
+    SPECIAL_STREET_ENDPOINT,
     TOURIST_ATTRACTION_ENDPOINT,
     CulturalFestivalService,
     MuseumArtGalleryService,
     ParkingLotService,
+    SpecialStreetService,
     TouristAttractionService,
 )
 
@@ -197,6 +199,54 @@ def test_iter_pages_stops_at_max_pages() -> None:
     assert len(pages) == 2
     assert transport.calls[0][0] == TOURIST_ATTRACTION_ENDPOINT
     assert transport.calls[1][1]["pageNo"] == 2
+
+
+def test_special_street_service_parses_standard_json_response() -> None:
+    transport = FakeTransport(
+        """
+        {
+          "response": {
+            "header": {"resultCode": "00", "resultMsg": "NORMAL_CODE"},
+            "body": {
+              "items": [
+                {
+                  "stretNm": "광릉숲음식문화특화테마거리",
+                  "stretIntrcn": "향토음식 기반 특화거리",
+                  "rdnmadr": "경기도 남양주시 진접읍 광릉수목원로 179-19",
+                  "latitude": "37.74711118",
+                  "longitude": "127.1874489",
+                  "stretLt": "480",
+                  "storNumber": "15",
+                  "appnYear": "2015",
+                  "phoneNumber": "031-590-2237",
+                  "institutionNm": "경기도 남양주시청 위생과",
+                  "referenceDate": "2026-03-26"
+                }
+              ],
+              "totalCount": 1,
+              "pageNo": 1,
+              "numOfRows": 100
+            }
+          }
+        }
+        """
+        .encode()
+    )
+    service = SpecialStreetService(transport=transport)
+
+    page = service.list(page_no=1, num_of_rows=100, stretNm="음식")
+
+    item = page.items[0]
+    assert item.stret_nm == "광릉숲음식문화특화테마거리"
+    assert item.longitude == 127.1874489
+    assert item.stret_lt == 480
+    assert item.stor_number == 15
+    assert item.appn_year == 2015
+    assert item.raw["stretNm"] == "광릉숲음식문화특화테마거리"
+    assert transport.calls[0] == (
+        SPECIAL_STREET_ENDPOINT,
+        {"pageNo": 1, "numOfRows": 100, "type": "json", "stretNm": "음식"},
+    )
 
 
 def test_api_error_raises() -> None:

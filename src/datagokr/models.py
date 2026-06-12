@@ -193,6 +193,23 @@ class PublicTouristAttraction(StandardItem):
     instt_code: str | None = None
 
 
+class PublicSpecialStreet(StandardItem):
+    stret_nm: str | None = Field(default=None, alias="stretNm")
+    stret_intrcn: str | None = Field(default=None, alias="stretIntrcn")
+    rdnmadr: str | None = None
+    lnmadr: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    stret_lt: float | None = Field(default=None, alias="stretLt")
+    stor_number: int | None = Field(default=None, alias="storNumber")
+    appn_year: int | None = Field(default=None, alias="appnYear")
+    phone_number: str | None = Field(default=None, alias="phoneNumber")
+    institution_nm: str | None = Field(default=None, alias="institutionNm")
+    reference_date: date | None = Field(default=None, alias="referenceDate")
+    instt_code: str | None = None
+    instt_nm: str | None = None
+
+
 class PublicCulturalFestival(StandardItem):
     fstvl_nm: str | None = Field(default=None, alias="fstvlNm")
     opar: str | None = None
@@ -212,6 +229,10 @@ class PublicCulturalFestival(StandardItem):
     reference_date: date | None = Field(default=None, alias="referenceDate")
     instt_code: str | None = None
     instt_nm: str | None = None
+
+
+class PublicFileDataRecord(StandardItem):
+    """data.go.kr 파일데이터 자동변환 API의 원본 row 보존 모델."""
 
 
 class AgriWeatherObservationStation(StandardItem):
