@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator
 from datetime import date
 from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+_INT_TEXT_RE = re.compile(r"[0-9]+")
 
 
 class DataGoKrModel(BaseModel):
@@ -144,6 +147,26 @@ class PublicParkingLot(StandardItem):
     reference_date: date | None = Field(default=None, alias="referenceDate")
     instt_code: str | None = None
     instt_nm: str | None = None
+
+    @field_validator(
+        "prkcmprt",
+        "basic_charge",
+        "add_unit_charge",
+        "day_cmmtkt",
+        "month_cmmtkt",
+        mode="before",
+    )
+    @classmethod
+    def _lenient_int(cls, value: Any) -> Any:
+        # 요금/수치 필드는 live 데이터에 자유 표기가 존재한다 (예: addUnitCharge='200+400' — #8).
+        # 산술 평가(200+400=600)는 구간별 요금 병기를 왜곡하므로 비숫자는 None으로 두고,
+        # 원본 표기는 StandardItem.raw에 보존된다.
+        if isinstance(value, str):
+            text = value.strip()
+            if _INT_TEXT_RE.fullmatch(text):
+                return int(text)
+            return None
+        return value
 
 
 class PublicTouristAttraction(StandardItem):
