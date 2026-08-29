@@ -1,7 +1,22 @@
 from __future__ import annotations
 
+from datagokr.catalog import (
+    SERVICE_KEY_ENV_NAMES,
+    SERVICE_KEY_PARAM,
+    ApiCatalogEntry,
+    ParamSpec,
+    get_api_catalog,
+    get_api_catalog_entry,
+)
 from datagokr.client import DataGoKrClient
 from datagokr.config import DataGoKrConfig
+from datagokr.debug import (
+    DebugRun,
+    debug_error,
+    jsonable,
+    redact_sensitive,
+    save_fixture,
+)
 from datagokr.models import (
     AgriWeatherObservationStation,
     KwaterSluiceRecord,
@@ -51,19 +66,24 @@ __all__ = [
     "MUSEUM_ART_GALLERY_ENDPOINT",
     "PARKING_LOT_ENDPOINT",
     "PROVIDER_NAME",
+    "SERVICE_KEY_ENV_NAMES",
+    "SERVICE_KEY_PARAM",
     "SPECIAL_STREET_ENDPOINT",
     "TOURIST_ATTRACTION_ENDPOINT",
     "AgriWeatherObservationStation",
     "AgriWeatherService",
+    "ApiCatalogEntry",
     "CulturalFestivalService",
     "DataGoKrClient",
     "DataGoKrConfig",
+    "DebugRun",
     "FileDataCatalogEntry",
     "FileDataService",
     "KwaterSluiceRecord",
     "KwaterSluiceService",
     "MuseumArtGalleryService",
     "OpenApiPage",
+    "ParamSpec",
     "ParkingLotService",
     "PublicCulturalFestival",
     "PublicFileDataRecord",
@@ -75,7 +95,13 @@ __all__ = [
     "StandardPage",
     "TouristAttractionService",
     "__version__",
+    "debug_error",
+    "get_api_catalog",
+    "get_api_catalog_entry",
     "get_file_dataset",
+    "jsonable",
+    "redact_sensitive",
+    "save_fixture",
     "save_to_local",
     "save_to_rustfs",
 ]

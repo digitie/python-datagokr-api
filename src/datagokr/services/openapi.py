@@ -57,6 +57,16 @@ class DataGoKrOpenApiService(Generic[T]):
         self._body_item_keys = body_item_keys
         self._default_num_of_rows = default_num_of_rows
 
+    @property
+    def page_no_param(self) -> str:
+        """실제 요청 URL에 실리는 페이지 번호 쿼리 파라미터명입니다."""
+        return self._page_no_param
+
+    @property
+    def num_rows_param(self) -> str:
+        """실제 요청 URL에 실리는 페이지당 행 수 쿼리 파라미터명입니다."""
+        return self._num_rows_param
+
     def list(
         self,
         *,
