@@ -5,7 +5,7 @@ from collections.abc import Iterator, Mapping
 from typing import Any, Generic, TypeVar
 from xml.etree import ElementTree
 
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, ValidationError
 
 from datagokr.config import DEFAULT_MAX_PAGE_SIZE
 from datagokr.exceptions import ApiErrorResponse
@@ -25,6 +25,8 @@ PARKING_LOT_ENDPOINT = "tn_pubr_prkplce_info_api"
 TOURIST_ATTRACTION_ENDPOINT = "tn_pubr_public_trrsrt_api"
 CULTURAL_FESTIVAL_ENDPOINT = "tn_pubr_public_cltur_fstvl_api"
 SPECIAL_STREET_ENDPOINT = "tn_pubr_public_area_spcliz_stret_api"
+
+DEFAULT_MAX_PAGES = 10_000
 
 T = TypeVar("T", bound=StandardItem)
 
@@ -68,19 +70,27 @@ class StandardOpenApiService(Generic[T]):
         header = _response_header(payload)
         _raise_for_error(header, payload)
         raw_items = _body_items(body)
-        items = [self._adapter.validate_python({**raw, "raw": dict(raw)}) for raw in raw_items]
-        return StandardPage[T](
-            total_count=_int_value(_first(body, "totalCount", "total_count"), len(items)),
+        items: list[T] = []
+        for raw in raw_items:
+            try:
+                items.append(self._adapter.validate_python({**raw, "raw": dict(raw)}))
+            except ValidationError:
+                continue
+        raw_total_count = _first(body, "totalCount", "total_count")
+        page = StandardPage[T](
+            total_count=_int_value(raw_total_count, len(items)),
             page_no=_int_value(_first(body, "pageNo", "page_no"), page_no),
             num_of_rows=_int_value(_first(body, "numOfRows", "num_of_rows"), num_of_rows),
             items=items,
         )
+        setattr(page, "total_count_known", raw_total_count is not None)  # noqa: B010
+        return page
 
     def iter_pages(
         self,
         *,
         num_of_rows: int = DEFAULT_MAX_PAGE_SIZE,
-        max_pages: int | None = None,
+        max_pages: int | None = DEFAULT_MAX_PAGES,
         **filters: Any,
     ) -> Iterator[StandardPage[T]]:
         page_no = 1
@@ -91,10 +101,10 @@ class StandardOpenApiService(Generic[T]):
                 return
             if max_pages is not None and page_no >= max_pages:
                 return
-            if page.total_pages and page_no >= page.total_pages:
+            total_count_known = getattr(page, "total_count_known", True)
+            if total_count_known and page.total_pages and page_no >= page.total_pages:
                 return
-            reached_known_end = page.total_count <= page_no * page.num_of_rows
-            if len(page.items) < page.num_of_rows and reached_known_end:
+            if len(page.items) < page.num_of_rows:
                 return
             page_no += 1
 
@@ -102,7 +112,7 @@ class StandardOpenApiService(Generic[T]):
         self,
         *,
         num_of_rows: int = DEFAULT_MAX_PAGE_SIZE,
-        max_pages: int | None = None,
+        max_pages: int | None = DEFAULT_MAX_PAGES,
         **filters: Any,
     ) -> Iterator[T]:
         for page in self.iter_pages(num_of_rows=num_of_rows, max_pages=max_pages, **filters):
@@ -214,8 +224,13 @@ def _response_body(payload: Mapping[str, Any]) -> Mapping[str, Any]:
 
 def _response_header(payload: Mapping[str, Any]) -> Mapping[str, Any]:
     response = payload.get("response", payload)
-    if isinstance(response, Mapping):
-        header = response.get("header", {})
+    if isinstance(response, Mapping) and "header" in response:
+        header = response["header"]
+        if isinstance(header, Mapping):
+            return header
+    gateway = payload.get("OpenAPI_ServiceResponse")
+    if isinstance(gateway, Mapping):
+        header = gateway.get("cmmMsgHeader")
         if isinstance(header, Mapping):
             return header
     return {}

@@ -7,6 +7,7 @@ from xml.etree import ElementTree
 
 from pydantic import TypeAdapter
 
+from datagokr.config import DEFAULT_MAX_PAGE_SIZE
 from datagokr.exceptions import ApiErrorResponse
 from datagokr.models import (
     AgriWeatherObservationStation,
@@ -65,9 +66,11 @@ class DataGoKrOpenApiService(Generic[T]):
     ) -> OpenApiPage[T]:
         if page_no <= 0:
             raise ValueError("page_no must be greater than 0")
-        resolved_num_of_rows = num_of_rows or self._default_num_of_rows
-        if resolved_num_of_rows <= 0:
-            raise ValueError("num_of_rows must be greater than 0")
+        resolved_num_of_rows = (
+            self._default_num_of_rows if num_of_rows is None else num_of_rows
+        )
+        if resolved_num_of_rows <= 0 or resolved_num_of_rows > DEFAULT_MAX_PAGE_SIZE:
+            raise ValueError(f"num_of_rows must be between 1 and {DEFAULT_MAX_PAGE_SIZE}")
 
         params: dict[str, Any] = {
             self._page_no_param: page_no,
@@ -86,9 +89,8 @@ class DataGoKrOpenApiService(Generic[T]):
         raw_items = _body_items(body, item_keys=self._body_item_keys)
         items = [self._adapter.validate_python({**raw, "raw": dict(raw)}) for raw in raw_items]
         return OpenApiPage[T](
-            total_count=_int_value(
+            total_count=_optional_int_value(
                 _first(body, "totalCount", "Total_Count", "total_count"),
-                len(items),
             ),
             page_no=_int_value(_first(body, "pageNo", "Page_No", "page_no"), page_no),
             num_of_rows=_int_value(
@@ -206,6 +208,42 @@ class KwaterSluiceService:
         )
         return _with_damcode(page, damcode)
 
+    def ten_minute_list(
+        self,
+        *,
+        damcode: str,
+        stdt: str,
+        eddt: str,
+        page_no: int = 1,
+        num_of_rows: int = 10,
+    ) -> OpenApiPage[KwaterSluiceRecord]:
+        page = self.ten_minutes.list(
+            page_no=page_no,
+            num_of_rows=num_of_rows,
+            damcode=damcode,
+            stdt=stdt,
+            eddt=eddt,
+        )
+        return _with_damcode(page, damcode)
+
+    def day_list(
+        self,
+        *,
+        damcode: str,
+        stdt: str,
+        eddt: str,
+        page_no: int = 1,
+        num_of_rows: int = 10,
+    ) -> OpenApiPage[KwaterSluiceRecord]:
+        page = self.daily.list(
+            page_no=page_no,
+            num_of_rows=num_of_rows,
+            damcode=damcode,
+            stdt=stdt,
+            eddt=eddt,
+        )
+        return _with_damcode(page, damcode)
+
 
 def _parse_response(content: bytes) -> Mapping[str, Any]:
     stripped = content.lstrip()
@@ -280,6 +318,8 @@ def _raise_for_error(header: Mapping[str, Any], payload: Mapping[str, Any]) -> N
     ) or ""
     if code in (None, "", "00", "200", "NORMAL_CODE"):
         return
+    if code == "03":
+        return
     raise ApiErrorResponse(code=str(code), message=message, payload=dict(payload))
 
 
@@ -308,6 +348,15 @@ def _int_value(value: Any, default: int = 0) -> int:
         return int(str(value).replace(",", ""))
     except (TypeError, ValueError):
         return default
+
+
+def _optional_int_value(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        return int(str(value).replace(",", ""))
+    except (TypeError, ValueError):
+        return None
 
 
 def _optional_str(value: Any) -> str | None:

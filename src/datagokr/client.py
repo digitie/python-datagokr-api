@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import weakref
 from types import TracebackType
 
 from datagokr.config import DataGoKrConfig
@@ -17,7 +18,11 @@ from datagokr.transport import SyncHttpxTransport
 
 
 class DataGoKrClient:
-    """Synchronous facade for selected data.go.kr standard open APIs."""
+    """Synchronous facade for selected data.go.kr standard open APIs.
+
+    Holds a pooled ``httpx.Client``; use as a context manager or call
+    ``close()`` explicitly to release its connections/file descriptors.
+    """
 
     def __init__(
         self,
@@ -32,15 +37,20 @@ class DataGoKrClient:
             timeout=timeout,
         )
         self._transport = SyncHttpxTransport(self.config)
-        self.museum_art = MuseumArtGalleryService(transport=self._transport)
-        self.parking = ParkingLotService(transport=self._transport)
-        self.tourist_attraction = TouristAttractionService(transport=self._transport)
-        self.festival = CulturalFestivalService(transport=self._transport)
-        self.special_street = SpecialStreetService(transport=self._transport)
-        self.file_data = FileDataService(transport=self._transport)
-        self.agri_weather = AgriWeatherService(transport=self._transport)
-        self.kwater_sluice = KwaterSluiceService(transport=self._transport)
+        try:
+            self.museum_art = MuseumArtGalleryService(transport=self._transport)
+            self.parking = ParkingLotService(transport=self._transport)
+            self.tourist_attraction = TouristAttractionService(transport=self._transport)
+            self.festival = CulturalFestivalService(transport=self._transport)
+            self.special_street = SpecialStreetService(transport=self._transport)
+            self.file_data = FileDataService(transport=self._transport)
+            self.agri_weather = AgriWeatherService(transport=self._transport)
+            self.kwater_sluice = KwaterSluiceService(transport=self._transport)
+        except Exception:
+            self._transport.close()
+            raise
         self.closed = False
+        weakref.finalize(self, self._transport.close)
 
     def save_to_local(self, file_path: str, content: bytes) -> None:
         """Save content to the local filesystem."""

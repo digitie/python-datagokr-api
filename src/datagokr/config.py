@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 from datagokr.exceptions import ConfigError
 
@@ -12,6 +13,8 @@ DEFAULT_MAX_PAGE_SIZE = 1000
 API_KEY_ENV_NAMES = (
     "DATA_GO_KR_SERVICE_KEY",
 )
+
+ALLOWED_BASE_URL_HOSTS = frozenset({"api.data.go.kr", "apis.data.go.kr"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,7 +52,8 @@ class DataGoKrConfig:
                     break
         resolved_base_url = (
             base_url or os.getenv("DATAGOKR_BASE_URL") or DEFAULT_DATA_GO_KR_BASE_URL
-        )
+        ).rstrip("/")
+        _validate_base_url(resolved_base_url)
 
         resolved_rustfs_endpoint = (
             rustfs_endpoint_url
@@ -81,7 +85,7 @@ class DataGoKrConfig:
 
         return cls(
             api_key=(resolved_api_key or None),
-            base_url=resolved_base_url.rstrip("/"),
+            base_url=resolved_base_url,
             timeout=_resolve_timeout(
                 timeout if timeout is not None else os.getenv("DATAGOKR_TIMEOUT")
             ),
@@ -90,6 +94,15 @@ class DataGoKrConfig:
             rustfs_secret_access_key=resolved_rustfs_secret_key or None,
             rustfs_bucket=resolved_rustfs_bucket,
             rustfs_region_name=resolved_rustfs_region,
+        )
+
+
+def _validate_base_url(base_url: str) -> None:
+    parts = urlsplit(base_url)
+    if parts.scheme != "https" or parts.hostname not in ALLOWED_BASE_URL_HOSTS:
+        raise ConfigError(
+            f"base_url must be an https:// URL on one of {sorted(ALLOWED_BASE_URL_HOSTS)}, "
+            f"got {base_url!r}"
         )
 
 

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator
 from datetime import date
 from typing import Any, Generic, TypeVar
 
@@ -45,9 +44,6 @@ class StandardPage(DataGoKrModel, Generic[T]):
             return 0
         return (self.total_count + self.num_of_rows - 1) // self.num_of_rows
 
-    def __iter__(self) -> Iterator[T]:  # type: ignore[override]
-        return iter(self.items)
-
     def __len__(self) -> int:
         return len(self.items)
 
@@ -64,19 +60,16 @@ class StandardItem(DataGoKrModel):
 class OpenApiPage(DataGoKrModel, Generic[T]):
     """Uniform container for non-standard data.go.kr OpenAPI list responses."""
 
-    total_count: int = 0
+    total_count: int | None = None
     page_no: int = 1
     num_of_rows: int = 10
     items: list[T] = Field(default_factory=list)
 
     @property
     def total_pages(self) -> int:
-        if self.num_of_rows <= 0:
+        if self.total_count is None or self.num_of_rows <= 0:
             return 0
         return (self.total_count + self.num_of_rows - 1) // self.num_of_rows
-
-    def __iter__(self) -> Iterator[T]:  # type: ignore[override]
-        return iter(self.items)
 
     def __len__(self) -> int:
         return len(self.items)
