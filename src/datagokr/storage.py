@@ -11,6 +11,8 @@ def save_to_local(file_path: str, content: bytes) -> None:
     If the target directory does not exist, it will be created automatically.
     """
     path = pathlib.Path(file_path)
+    if ".." in path.parts:
+        raise ValueError(f"file_path must not contain '..' components: {file_path!r}")
     if path.parent:
         path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(content)
@@ -90,11 +92,7 @@ def save_to_rustfs(
 
     try:
         s3_client = boto3.client("s3", **kwargs)
-        s3_client.put_object(
-            Bucket=resolved_bucket,
-            Key=resolved_key,
-            Body=content,
-        )
+        s3_client.upload_file(file_path, resolved_bucket, resolved_key)
     except Exception as exc:
         raise RuntimeError(
             f"RustFS 업로드 실패 (bucket={resolved_bucket!r}, key={resolved_key!r}): {exc}"

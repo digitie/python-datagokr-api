@@ -9,7 +9,7 @@ from typing import Any
 from pydantic import TypeAdapter
 
 from datagokr.config import DEFAULT_MAX_PAGE_SIZE
-from datagokr.exceptions import ApiErrorResponse
+from datagokr.exceptions import ApiErrorResponse, UnknownDatasetError, ValidationError
 from datagokr.models import PublicFileDataRecord, StandardPage
 from datagokr.transport import SyncTransport
 
@@ -111,7 +111,7 @@ def get_file_dataset(slug: str) -> FileDataCatalogEntry:
     try:
         return FILE_DATASETS[slug]
     except KeyError:
-        raise KeyError(f"unknown data.go.kr file dataset: {slug}") from None
+        raise UnknownDatasetError(f"unknown data.go.kr file dataset: {slug}") from None
 
 
 class FileDataService:
@@ -135,9 +135,9 @@ class FileDataService:
         **filters: Any,
     ) -> StandardPage[PublicFileDataRecord]:
         if page_no <= 0:
-            raise ValueError("page_no must be greater than 0")
+            raise ValidationError("page_no must be greater than 0")
         if per_page <= 0 or per_page > DEFAULT_MAX_PAGE_SIZE:
-            raise ValueError(f"per_page must be between 1 and {DEFAULT_MAX_PAGE_SIZE}")
+            raise ValidationError(f"per_page must be between 1 and {DEFAULT_MAX_PAGE_SIZE}")
 
         entry = dataset if isinstance(dataset, FileDataCatalogEntry) else get_file_dataset(dataset)
         params = _request_params(page_no=page_no, per_page=per_page, filters=filters)

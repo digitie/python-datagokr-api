@@ -59,11 +59,7 @@ def test_save_to_rustfs_uploads_via_mocked_boto3(
         aws_access_key_id="key",
         aws_secret_access_key="secret",
     )
-    mock_s3_client.put_object.assert_called_with(
-        Bucket="my-bucket",
-        Key="my-key",
-        Body=content,
-    )
+    mock_s3_client.upload_file.assert_called_with(str(file_path), "my-bucket", "my-key")
 
 
 @patch("datagokr.storage._import_boto3")
@@ -98,11 +94,7 @@ def test_save_to_rustfs_uses_fallback_config_and_env(
         aws_access_key_id="env-key",
         aws_secret_access_key="env-secret",
     )
-    mock_s3_client.put_object.assert_called_with(
-        Bucket="env-bucket",
-        Key="test.bin",
-        Body=content,
-    )
+    mock_s3_client.upload_file.assert_called_with(str(file_path), "env-bucket", "test.bin")
 
 
 @patch("datagokr.storage._import_boto3")
@@ -148,11 +140,7 @@ def test_client_save_to_rustfs_delegates_with_config(
         aws_access_key_id="config-key",
         aws_secret_access_key="config-secret",
     )
-    mock_s3_client.put_object.assert_called_with(
-        Bucket="config-bucket",
-        Key="custom-key",
-        Body=content,
-    )
+    mock_s3_client.upload_file.assert_called_with(str(file_path), "config-bucket", "custom-key")
 
 
 @patch("datagokr.storage._import_boto3")

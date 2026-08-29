@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 import time
 from typing import Any, Protocol
 
@@ -34,12 +35,16 @@ class SyncHttpxTransport:
                 response = self._client.get(url, params=request_params)
                 response.raise_for_status()
             except httpx.HTTPStatusError as exc:
-                raise TransportError(str(exc)) from exc
+                safe_url = exc.request.url.copy_remove_param("serviceKey")
+                raise TransportError(
+                    f"HTTP {exc.response.status_code} error for url '{safe_url}'",
+                    status_code=exc.response.status_code,
+                ) from None
             except httpx.TransportError as exc:
                 last_error = exc
                 if attempt == 2:
                     break
-                time.sleep(0.5 * (attempt + 1))
+                time.sleep(0.5 * (attempt + 1) * random.uniform(0.5, 1.5))
             else:
                 return response.content
         message = str(last_error) if last_error is not None else "unknown transport error"
