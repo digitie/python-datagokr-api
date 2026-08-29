@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import json
 from collections.abc import Iterator, Mapping
 from typing import Any, Generic, TypeVar
-from xml.etree import ElementTree
 
 from pydantic import TypeAdapter, ValidationError
 
@@ -18,6 +16,7 @@ from datagokr.models import (
     StandardItem,
     StandardPage,
 )
+from datagokr.services import pagination
 from datagokr.transport import SyncTransport
 
 MUSEUM_ART_GALLERY_ENDPOINT = "tn_pubr_public_museum_artgr_info_api"
@@ -65,7 +64,7 @@ class StandardOpenApiService(Generic[T]):
             response_type=response_type,
             filters=filters,
         )
-        payload = _parse_response(self._transport.get(self.endpoint, params=params))
+        payload = pagination.parse_response(self._transport.get(self.endpoint, params=params))
         body = _response_body(payload)
         header = _response_header(payload)
         _raise_for_error(header, payload)
@@ -76,11 +75,13 @@ class StandardOpenApiService(Generic[T]):
                 items.append(self._adapter.validate_python({**raw, "raw": dict(raw)}))
             except ValidationError:
                 continue
-        raw_total_count = _first(body, "totalCount", "total_count")
+        raw_total_count = pagination.first(body, "totalCount", "total_count")
         page = StandardPage[T](
-            total_count=_int_value(raw_total_count, len(items)),
-            page_no=_int_value(_first(body, "pageNo", "page_no"), page_no),
-            num_of_rows=_int_value(_first(body, "numOfRows", "num_of_rows"), num_of_rows),
+            total_count=pagination.int_value(raw_total_count, len(items)),
+            page_no=pagination.int_value(pagination.first(body, "pageNo", "page_no"), page_no),
+            num_of_rows=pagination.int_value(
+                pagination.first(body, "numOfRows", "num_of_rows"), num_of_rows
+            ),
             items=items,
         )
         setattr(page, "total_count_known", raw_total_count is not None)  # noqa: B010
@@ -93,20 +94,9 @@ class StandardOpenApiService(Generic[T]):
         max_pages: int | None = DEFAULT_MAX_PAGES,
         **filters: Any,
     ) -> Iterator[StandardPage[T]]:
-        page_no = 1
-        while True:
-            page = self.list(page_no=page_no, num_of_rows=num_of_rows, **filters)
-            yield page
-            if not page.items:
-                return
-            if max_pages is not None and page_no >= max_pages:
-                return
-            total_count_known = getattr(page, "total_count_known", True)
-            if total_count_known and page.total_pages and page_no >= page.total_pages:
-                return
-            if len(page.items) < page.num_of_rows:
-                return
-            page_no += 1
+        return pagination.iter_pages(
+            self.list, num_of_rows=num_of_rows, max_pages=max_pages, filters=filters
+        )
 
     def iter_all(
         self,
@@ -115,8 +105,9 @@ class StandardOpenApiService(Generic[T]):
         max_pages: int | None = DEFAULT_MAX_PAGES,
         **filters: Any,
     ) -> Iterator[T]:
-        for page in self.iter_pages(num_of_rows=num_of_rows, max_pages=max_pages, **filters):
-            yield from page.items
+        return pagination.iter_all(
+            self.iter_pages, num_of_rows=num_of_rows, max_pages=max_pages, filters=filters
+        )
 
 
 class MuseumArtGalleryService(StandardOpenApiService[PublicMuseumArtGallery]):
@@ -182,37 +173,6 @@ def _request_params(
     return params
 
 
-def _parse_response(content: bytes) -> Mapping[str, Any]:
-    stripped = content.lstrip()
-    if stripped.startswith((b"{", b"[")):
-        loaded = json.loads(content.decode("utf-8-sig"))
-        return loaded if isinstance(loaded, Mapping) else {"response": {"body": {"items": loaded}}}
-    return _xml_to_mapping(content)
-
-
-def _xml_to_mapping(content: bytes) -> Mapping[str, Any]:
-    root = ElementTree.fromstring(content)
-    return {root.tag: _element_to_value(root)}
-
-
-def _element_to_value(element: ElementTree.Element) -> Any:
-    children = list(element)
-    text = (element.text or "").strip()
-    if not children:
-        return text
-    grouped: dict[str, Any] = {}
-    for child in children:
-        value = _element_to_value(child)
-        existing = grouped.get(child.tag)
-        if existing is None:
-            grouped[child.tag] = value
-        elif isinstance(existing, list):
-            existing.append(value)
-        else:
-            grouped[child.tag] = [existing, value]
-    return grouped
-
-
 def _response_body(payload: Mapping[str, Any]) -> Mapping[str, Any]:
     response = payload.get("response", payload)
     if isinstance(response, Mapping):
@@ -237,9 +197,9 @@ def _response_header(payload: Mapping[str, Any]) -> Mapping[str, Any]:
 
 
 def _body_items(body: Mapping[str, Any]) -> list[Mapping[str, Any]]:
-    items = _first(body, "items", "item", "data", "row")
+    items = pagination.first(body, "items", "item", "data", "row")
     if isinstance(items, Mapping):
-        nested = _first(items, "item", "items", "data", "row")
+        nested = pagination.first(items, "item", "items", "data", "row")
         if nested is not None:
             items = nested
         else:
@@ -252,34 +212,17 @@ def _body_items(body: Mapping[str, Any]) -> list[Mapping[str, Any]]:
 
 
 def _raise_for_error(header: Mapping[str, Any], payload: Mapping[str, Any]) -> None:
-    code = _optional_str(_first(header, "resultCode", "result_code", "returnReasonCode"))
-    message = _optional_str(_first(header, "resultMsg", "result_msg", "returnAuthMsg")) or ""
+    code = pagination.optional_str(
+        pagination.first(header, "resultCode", "result_code", "returnReasonCode")
+    )
+    message = (
+        pagination.optional_str(
+            pagination.first(header, "resultMsg", "result_msg", "returnAuthMsg")
+        )
+        or ""
+    )
     if code in (None, "", "00", "NORMAL_CODE"):
         return
     if code == "03":
         return
     raise ApiErrorResponse(code=str(code), message=message, payload=dict(payload))
-
-
-def _first(raw: Mapping[str, Any], *keys: str) -> Any:
-    for key in keys:
-        value = raw.get(key)
-        if value not in (None, ""):
-            return value
-    return None
-
-
-def _int_value(value: Any, default: int = 0) -> int:
-    if value in (None, ""):
-        return default
-    try:
-        return int(str(value).replace(",", ""))
-    except (TypeError, ValueError):
-        return default
-
-
-def _optional_str(value: Any) -> str | None:
-    if value is None:
-        return None
-    text = str(value).strip()
-    return text or None

@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import json
 from collections.abc import Iterator, Mapping
 from typing import Any, Generic, TypeVar
-from xml.etree import ElementTree
 
 from pydantic import TypeAdapter
 
@@ -15,6 +13,7 @@ from datagokr.models import (
     OpenApiPage,
     StandardItem,
 )
+from datagokr.services import pagination
 from datagokr.transport import SyncTransport
 
 AGRI_WEATHER_STATION_ENDPOINT = "https://apis.data.go.kr/1390802/AgriWeather/getObsrSpotList"
@@ -92,19 +91,21 @@ class DataGoKrOpenApiService(Generic[T]):
             if value not in (None, ""):
                 params[key] = value
 
-        payload = _parse_response(self._transport.get(self.endpoint, params=params))
+        payload = pagination.parse_response(self._transport.get(self.endpoint, params=params))
         body = _response_body(payload)
         header = _response_header(payload)
         _raise_for_error(header, payload)
         raw_items = _body_items(body, item_keys=self._body_item_keys)
         items = [self._adapter.validate_python({**raw, "raw": dict(raw)}) for raw in raw_items]
         return OpenApiPage[T](
-            total_count=_optional_int_value(
-                _first(body, "totalCount", "Total_Count", "total_count"),
+            total_count=pagination.optional_int_value(
+                pagination.first(body, "totalCount", "Total_Count", "total_count"),
             ),
-            page_no=_int_value(_first(body, "pageNo", "Page_No", "page_no"), page_no),
-            num_of_rows=_int_value(
-                _first(body, "numOfRows", "Rcdcnt", "num_of_rows"),
+            page_no=pagination.int_value(
+                pagination.first(body, "pageNo", "Page_No", "page_no"), page_no
+            ),
+            num_of_rows=pagination.int_value(
+                pagination.first(body, "numOfRows", "Rcdcnt", "num_of_rows"),
                 resolved_num_of_rows,
             ),
             items=items,
@@ -117,19 +118,9 @@ class DataGoKrOpenApiService(Generic[T]):
         max_pages: int | None = None,
         **filters: Any,
     ) -> Iterator[OpenApiPage[T]]:
-        page_no = 1
-        while True:
-            page = self.list(page_no=page_no, num_of_rows=num_of_rows, **filters)
-            yield page
-            if not page.items:
-                return
-            if max_pages is not None and page_no >= max_pages:
-                return
-            if page.total_pages and page_no >= page.total_pages:
-                return
-            if len(page.items) < page.num_of_rows:
-                return
-            page_no += 1
+        return pagination.iter_pages(
+            self.list, num_of_rows=num_of_rows, max_pages=max_pages, filters=filters
+        )
 
     def iter_all(
         self,
@@ -138,8 +129,9 @@ class DataGoKrOpenApiService(Generic[T]):
         max_pages: int | None = None,
         **filters: Any,
     ) -> Iterator[T]:
-        for page in self.iter_pages(num_of_rows=num_of_rows, max_pages=max_pages, **filters):
-            yield from page.items
+        return pagination.iter_all(
+            self.iter_pages, num_of_rows=num_of_rows, max_pages=max_pages, filters=filters
+        )
 
 
 class AgriWeatherService:
@@ -255,37 +247,6 @@ class KwaterSluiceService:
         return _with_damcode(page, damcode)
 
 
-def _parse_response(content: bytes) -> Mapping[str, Any]:
-    stripped = content.lstrip()
-    if stripped.startswith((b"{", b"[")):
-        loaded = json.loads(content.decode("utf-8-sig"))
-        return loaded if isinstance(loaded, Mapping) else {"response": {"body": {"items": loaded}}}
-    return _xml_to_mapping(content)
-
-
-def _xml_to_mapping(content: bytes) -> Mapping[str, Any]:
-    root = ElementTree.fromstring(content)
-    return {root.tag: _element_to_value(root)}
-
-
-def _element_to_value(element: ElementTree.Element) -> Any:
-    children = list(element)
-    text = (element.text or "").strip()
-    if not children:
-        return text
-    grouped: dict[str, Any] = {}
-    for child in children:
-        value = _element_to_value(child)
-        existing = grouped.get(child.tag)
-        if existing is None:
-            grouped[child.tag] = value
-        elif isinstance(existing, list):
-            existing.append(value)
-        else:
-            grouped[child.tag] = [existing, value]
-    return grouped
-
-
 def _response_body(payload: Mapping[str, Any]) -> Mapping[str, Any]:
     response = payload.get("response", payload)
     if isinstance(response, Mapping):
@@ -305,9 +266,9 @@ def _response_header(payload: Mapping[str, Any]) -> Mapping[str, Any]:
 
 
 def _body_items(body: Mapping[str, Any], *, item_keys: tuple[str, ...]) -> list[Mapping[str, Any]]:
-    items = _first(body, *item_keys)
+    items = pagination.first(body, *item_keys)
     if isinstance(items, Mapping):
-        nested = _first(items, *item_keys)
+        nested = pagination.first(items, *item_keys)
         if nested is not None:
             items = nested
         else:
@@ -320,12 +281,15 @@ def _body_items(body: Mapping[str, Any], *, item_keys: tuple[str, ...]) -> list[
 
 
 def _raise_for_error(header: Mapping[str, Any], payload: Mapping[str, Any]) -> None:
-    code = _optional_str(
-        _first(header, "resultCode", "Result_Code", "result_code", "returnReasonCode")
+    code = pagination.optional_str(
+        pagination.first(header, "resultCode", "Result_Code", "result_code", "returnReasonCode")
     )
-    message = _optional_str(
-        _first(header, "resultMsg", "Result_Msg", "result_msg", "returnAuthMsg")
-    ) or ""
+    message = (
+        pagination.optional_str(
+            pagination.first(header, "resultMsg", "Result_Msg", "result_msg", "returnAuthMsg")
+        )
+        or ""
+    )
     if code in (None, "", "00", "200", "NORMAL_CODE"):
         return
     if code == "03":
@@ -341,36 +305,3 @@ def _with_damcode(
         if item.damcode is None:
             item.damcode = damcode
     return page
-
-
-def _first(raw: Mapping[str, Any], *keys: str) -> Any:
-    for key in keys:
-        value = raw.get(key)
-        if value not in (None, ""):
-            return value
-    return None
-
-
-def _int_value(value: Any, default: int = 0) -> int:
-    if value in (None, ""):
-        return default
-    try:
-        return int(str(value).replace(",", ""))
-    except (TypeError, ValueError):
-        return default
-
-
-def _optional_int_value(value: Any) -> int | None:
-    if value in (None, ""):
-        return None
-    try:
-        return int(str(value).replace(",", ""))
-    except (TypeError, ValueError):
-        return None
-
-
-def _optional_str(value: Any) -> str | None:
-    if value is None:
-        return None
-    text = str(value).strip()
-    return text or None

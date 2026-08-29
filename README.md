@@ -64,6 +64,29 @@ with DataGoKrClient() as client:
 환경변수에 설정합니다. data.go.kr 엔드포인트 서비스키 환경변수는 형제 저장소와
 이 이름으로 통일합니다(`docs/decisions.md` D-002). `.env`는 저장소에 포함하지 않습니다.
 
+## RustFS 저장 설정 (선택)
+
+`client.save_to_rustfs()`(`src/datagokr/storage.py`)로 다운로드한 바이트를 로컬 저장과
+동시에 S3 호환 RustFS 객체 저장소에 올리려면 아래 환경변수를 설정합니다. `save_to_local()`만
+쓰는 경우에는 필요 없습니다.
+
+각 값은 `save_to_rustfs()` 호출 시 넘긴 인자(또는 `DataGoKrClient` 생성 시 넘긴 값) →
+`DATAGOKR_RUSTFS_*` 환경변수 → `RUSTFS_*` 환경변수 → 기본값 순으로 해석됩니다(먼저
+찾은 값을 사용).
+
+| 환경변수 (`DATAGOKR_` 접두 우선, 없으면 `RUSTFS_` 접두 사용) | 역할 | 기본값 |
+|------|------|--------|
+| `DATAGOKR_RUSTFS_BUCKET` / `RUSTFS_BUCKET` | 업로드 대상 버킷명 | `datagokr-uploads` |
+| `DATAGOKR_RUSTFS_ENDPOINT_URL` / `RUSTFS_ENDPOINT_URL` | RustFS S3 호환 엔드포인트 URL | 없음(미설정 시 boto3 기본 리졸버 사용) |
+| `DATAGOKR_RUSTFS_ACCESS_KEY_ID` / `RUSTFS_ACCESS_KEY_ID` | 액세스 키 ID | 없음 |
+| `DATAGOKR_RUSTFS_SECRET_ACCESS_KEY` / `RUSTFS_SECRET_ACCESS_KEY` | 시크릿 액세스 키 | 없음 |
+| `DATAGOKR_RUSTFS_REGION_NAME` / `RUSTFS_REGION_NAME` | 리전명 | `us-east-1` |
+
+RustFS 업로드에는 `boto3`가 필요합니다(`pip install boto3`, 패키지 자체 의존성에는
+포함되어 있지 않습니다). 액세스 키/시크릿 키를 모두 설정하지 않으면 boto3 기본 자격
+증명 체인(환경변수, 공유 credentials 파일 등)을 그대로 따릅니다. `.env`는 저장소에
+포함하지 않습니다.
+
 ## 예제: 관광지 표준데이터 조회
 
 ```python
