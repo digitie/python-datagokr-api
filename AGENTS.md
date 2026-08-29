@@ -19,6 +19,36 @@
 
 이 저장소(GitHub 이름 `python-datagokr-api`, Python 패키지 `datagokr`)는 한국 공공데이터포털(data.go.kr)의 표준 Open API 및 특정 OpenAPI들을 TripMate 서비스에서 사용할 수 있도록 타입 정의와 httpx 기반 HTTP 전송을 묶어 둔 **Typed Python 클라이언트 라이브러리**다.
 
+## Think Before Coding
+
+- 변경 전 관련 서비스 클래스(`src/datagokr/services/standard.py`, `services/file_data.py`, `services/openapi.py`)를 먼저 읽을 것
+- 새 필드/모델을 추가하기 전 `tests/unit/`의 기존 fixture 응답으로 실제 data.go.kr 필드명을 확인할 것
+- `client.py`의 서비스 속성 이름과 `__init__.py`의 공개 export 목록이 일치하는지 확인할 것
+
+## Simplicity First
+
+- 요청을 완전히 해결하는 최소한의 코드만 작성할 것
+- 요청되지 않은 기능(예: 아직 필요 없는 비동기 클라이언트)을 추가하지 말 것
+- 구체적인 필요 없이 설정 가능성이나 유연성을 늘리지 말 것
+
+## Surgical Changes
+
+- 버그 수정은 원인이 되는 서비스/모델 코드만 건드리고 주변 리팩터링을 곁들이지 말 것
+- `DataGoKrClient`의 공개 서비스 속성 이름(`museum_art`, `file_data` 등)을 임의로 바꾸지 말 것 — TripMate 소비 코드가 직접 참조한다
+- `FILE_DATASETS` 같은 카탈로그 항목을 변경할 때는 실제 data.go.kr 상세 페이지 값을 재확인한 뒤 수정할 것
+
+## Goal-Driven Execution
+
+- 실제 사용자 요청(또는 이슈)이 요구하는 것만 구현할 것
+- data.go.kr 오류 envelope(HTTP 200 + 오류 코드로 감싼 실패)을 다룰 때는 `exceptions.py`의 기존 예외 계층을 따를 것
+- 검증되지 않은 가정을 문서에 기록하지 말 것 — 실제 API 응답이나 코드로 확인한 것만 기록할 것
+
+## Practical Bias
+
+- 동작하는 최소 구현을 우선하고, 완벽한 일반화를 좇지 말 것
+- provider가 원문에서 쓰는 필드명(`fclty_nm`, `trrsrt_nm` 등)은 번역하지 말고 `Field(alias=...)`로만 매핑할 것
+- 네트워크 호출 없는 단위 테스트를 실제 API 호출이 필요한 live 테스트보다 우선할 것
+
 ## 식별자 (혼동 방지)
 
 | 항목 | 값 |
