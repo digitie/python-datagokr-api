@@ -114,12 +114,15 @@ def iter_pages(
     the declared total page count is reached (only trusted when the page
     has no ``total_count_known`` attribute, or has one that is truthy --
     see ``StandardOpenApiService.list``, which sets it to ``False`` when the
-    upstream response omitted ``totalCount``), or a short page is returned.
+    upstream response omitted ``totalCount``), or a short page is returned
+    *and* the declared total confirms that it is the last one.
     """
     page_no = 1
+    seen = 0
     while True:
         page = list_fn(page_no=page_no, num_of_rows=num_of_rows, **filters)
         yield page
+        seen += len(page.items)
         if not page.items:
             return
         if max_pages is not None and page_no >= max_pages:
@@ -127,9 +130,32 @@ def iter_pages(
         total_count_known = getattr(page, "total_count_known", True)
         if total_count_known and page.total_pages and page_no >= page.total_pages:
             return
-        if len(page.items) < page.num_of_rows:
+        if len(page.items) < page.num_of_rows and _reached_known_end(
+            page, seen=seen, total_count_known=total_count_known
+        ):
             return
         page_no += 1
+
+
+def _reached_known_end(page: Any, *, seen: int, total_count_known: bool) -> bool:
+    """Whether a short page is genuinely the end of the stream.
+
+    A page comes back short for two very different reasons: upstream ran out
+    of rows, or a full upstream page lost rows to row-level validation. Only
+    the declared total tells them apart, so a short page ends the stream only
+    once the rows seen so far account for that total.
+
+    With no trustworthy total we keep paging and let an empty page end it.
+    That costs one extra request at the tail; treating the short page as the
+    end instead would silently truncate the caller's data, and a caller has
+    no way to notice a truncation that never raises.
+    """
+    if not total_count_known:
+        return False
+    total_count = getattr(page, "total_count", None)
+    if not total_count:
+        return False
+    return seen >= total_count
 
 
 def iter_all(
