@@ -153,7 +153,9 @@ def _reached_known_end(page: Any, *, seen: int, total_count_known: bool) -> bool
     if not total_count_known:
         return False
     total_count = getattr(page, "total_count", None)
-    if not total_count:
+    # ``OpenApiPage.total_count`` is ``int | None``; anything else means the
+    # envelope did not carry a usable total.
+    if not isinstance(total_count, int) or total_count <= 0:
         return False
     return seen >= total_count
 
