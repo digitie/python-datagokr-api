@@ -6,7 +6,7 @@
 
 `python-datagokr-api`(Python import 패키지 `datagokr`)는 TripMate가 쓰는 공공데이터포털
 (data.go.kr) 표준데이터 Open API, 파일데이터 자동변환 API, 개별 OpenAPI 일부를 감싸는 작은
-typed Python client 라이브러리입니다. `DataGoKrClient`는 동기 전용 인터페이스로 서비스별
+typed Python client 라이브러리입니다. `DataGoKrClient`는 async 전용 인터페이스로 서비스별
 속성(`museum_art`, `parking`, `tourist_attraction`, `festival`, `special_street`,
 `file_data`, `agri_weather`, `kwater_sluice`)을 제공하며, 모든 응답을 Pydantic v2 모델로
 typed 변환합니다.
@@ -52,11 +52,11 @@ pip install "python-datagokr-api @ git+https://github.com/digitie/python-datagok
 ```python
 from datagokr import DataGoKrClient
 
-with DataGoKrClient() as client:
-    page = client.museum_art.list(num_of_rows=10)
+async with DataGoKrClient(max_rps=5) as client:
+    page = await client.museum_art.list(num_of_rows=10)
     print(page.total_count, page.items[0].fclty_nm)
 
-    file_page = client.file_data.ansan_world_restaurants(per_page=10)
+    file_page = await client.file_data.ansan_world_restaurants(per_page=10)
     print(file_page.items[0].raw["가게명"])
 ```
 
@@ -64,10 +64,26 @@ with DataGoKrClient() as client:
 환경변수에 설정합니다. data.go.kr 엔드포인트 서비스키 환경변수는 형제 저장소와
 이 이름으로 통일합니다(`docs/decisions.md` D-002). `.env`는 저장소에 포함하지 않습니다.
 
+## 비동기 전환과 TPS 설정
+
+모든 API 조회, `debug_fetch()`, 파일 저장은 `await`로 호출한다. 페이지와 항목은
+`async for page in client.museum_art.iter_pages()` 및
+`async for item in client.museum_art.iter_all()`로 순회한다. `close()`와 동기 context
+manager는 제거했다. `async with` 또는 `await client.aclose()`로 연결을 해제한다.
+위 예제는 async 함수 내부에서 실행하며, 일반 스크립트는 가장 바깥에서 한 번
+`asyncio.run(main())`을 호출한다.
+
+`max_rps`는 초당 충전량이고 기본값은 5다. 초기 burst 용량은 `max(1, max_rps)`다.
+`AsyncTokenBucket(max_rps=0.5, capacity=1)`처럼 1 TPS 미만도 지원한다.
+여러 클라이언트가 같은 quota를 쓰면 `rate_limiter=bucket`으로 같은 버킷을 주입한다.
+주입한 버킷이 `max_rps`보다 우선하며 한 이벤트 루프에서만 공유할 수 있다.
+서비스별 요청, 재시도, redirect가 모두 같은 예산을 소비한다.
+자세한 계약과 검증 범위는 [비동기·TPS 안내](docs/async-tps.md)를 참고한다.
+
 ## RustFS 저장 설정 (선택)
 
 `client.save_to_rustfs()`(`src/datagokr/storage.py`)로 다운로드한 바이트를 로컬 저장과
-동시에 S3 호환 RustFS 객체 저장소에 올리려면 아래 환경변수를 설정합니다. `save_to_local()`만
+동시에 S3 호환 RustFS 객체 저장소에 올리려면 아래 환경변수를 설정합니다. `await save_to_local()`만
 쓰는 경우에는 필요 없습니다.
 
 각 값은 `save_to_rustfs()` 호출 시 넘긴 인자(또는 `DataGoKrClient` 생성 시 넘긴 값) →
@@ -92,8 +108,8 @@ RustFS 업로드에는 `boto3`가 필요합니다(`pip install boto3`, 패키지
 ```python
 from datagokr import DataGoKrClient
 
-with DataGoKrClient() as client:
-    page = client.tourist_attraction.list(num_of_rows=5)
+async with DataGoKrClient(max_rps=5) as client:
+    page = await client.tourist_attraction.list(num_of_rows=5)
     for item in page.items:
         print(item.trrsrt_nm, item.rdnmadr)
 ```
@@ -145,7 +161,7 @@ TripMate 문서에서 별도 `python-*-api` 소유가 없는 data.go.kr OpenAPI�
 | `src/datagokr/services/file_data.py` | 파일데이터 자동변환 카탈로그와 서비스 |
 | `src/datagokr/services/openapi.py` | 개별 OpenAPI(농업기상, 수문) 서비스 |
 | `src/datagokr/models.py` | Pydantic v2 응답 모델 |
-| `src/datagokr/transport.py` | httpx 기반 동기 전송 계층 |
+| `src/datagokr/transport.py` | httpx 기반 비동기 전송 계층 |
 | `src/datagokr/storage.py` | 로컬/RustFS 저장 helper |
 | `tests/unit/` | 네트워크 호출 없는 단위 테스트 |
 | `tests/integration/` | `@pytest.mark.live`가 붙은 실제 data.go.kr 호출 테스트 |

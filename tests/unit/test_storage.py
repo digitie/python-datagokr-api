@@ -10,18 +10,18 @@ from datagokr.config import DataGoKrConfig
 from datagokr.storage import save_to_local, save_to_rustfs
 
 
-def test_save_to_local_creates_directory_and_writes_file(tmp_path: pathlib.Path) -> None:
+async def test_save_to_local_creates_directory_and_writes_file(tmp_path: pathlib.Path) -> None:
     file_path = tmp_path / "subdir" / "test.txt"
     content = b"hello world"
 
-    save_to_local(str(file_path), content)
+    await save_to_local(str(file_path), content)
 
     assert file_path.exists()
     assert file_path.read_bytes() == content
 
 
 @patch("datagokr.storage._import_boto3")
-def test_save_to_rustfs_uploads_via_mocked_boto3(
+async def test_save_to_rustfs_uploads_via_mocked_boto3(
     mock_import: MagicMock,
     tmp_path: pathlib.Path,
 ) -> None:
@@ -35,7 +35,7 @@ def test_save_to_rustfs_uploads_via_mocked_boto3(
     content = b"data"
 
     # Act
-    save_to_rustfs(
+    await save_to_rustfs(
         str(file_path),
         content,
         bucket="my-bucket",
@@ -63,7 +63,7 @@ def test_save_to_rustfs_uploads_via_mocked_boto3(
 
 
 @patch("datagokr.storage._import_boto3")
-def test_save_to_rustfs_uses_fallback_config_and_env(
+async def test_save_to_rustfs_uses_fallback_config_and_env(
     mock_import: MagicMock,
     tmp_path: pathlib.Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -84,7 +84,7 @@ def test_save_to_rustfs_uses_fallback_config_and_env(
     content = b"data"
 
     # Act
-    save_to_rustfs(str(file_path), content)
+    await save_to_rustfs(str(file_path), content)
 
     # Assert S3 upload fallback
     mock_boto3.client.assert_called_with(
@@ -98,7 +98,7 @@ def test_save_to_rustfs_uses_fallback_config_and_env(
 
 
 @patch("datagokr.storage._import_boto3")
-def test_client_save_to_rustfs_delegates_with_config(
+async def test_client_save_to_rustfs_delegates_with_config(
     mock_import: MagicMock,
     tmp_path: pathlib.Path,
 ) -> None:
@@ -120,18 +120,18 @@ def test_client_save_to_rustfs_delegates_with_config(
         rustfs_secret_access_key="config-secret",
     )
 
-    with DataGoKrClient(api_key="key") as client:
+    async with DataGoKrClient(api_key="key") as client:
         # Override config manually for testing
         object.__setattr__(client, "config", config)
 
         assert client.file_data.datasets()
         assert client.special_street.endpoint == "tn_pubr_public_area_spcliz_stret_api"
 
-        client.save_to_local(str(file_path), content)
+        await client.save_to_local(str(file_path), content)
         assert file_path.exists()
         assert file_path.read_bytes() == content
 
-        client.save_to_rustfs(str(file_path), content, object_key="custom-key")
+        await client.save_to_rustfs(str(file_path), content, object_key="custom-key")
 
     mock_boto3.client.assert_called_with(
         "s3",
@@ -144,7 +144,7 @@ def test_client_save_to_rustfs_delegates_with_config(
 
 
 @patch("datagokr.storage._import_boto3")
-def test_save_to_rustfs_raises_runtime_error_if_boto3_missing(
+async def test_save_to_rustfs_raises_runtime_error_if_boto3_missing(
     mock_import: MagicMock,
     tmp_path: pathlib.Path,
 ) -> None:
@@ -154,4 +154,4 @@ def test_save_to_rustfs_raises_runtime_error_if_boto3_missing(
 
     # Act & Assert
     with pytest.raises(RuntimeError, match="boto3가 필요합니다"):
-        save_to_rustfs(str(file_path), b"data")
+        await save_to_rustfs(str(file_path), b"data")

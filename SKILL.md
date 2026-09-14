@@ -50,7 +50,7 @@ src/datagokr/
   config.py               — 서비스 인증키(Service Key) 로드 및 기본 설정
   exceptions.py           — DataGoKrError 및 하위 예외 클래스 선언
   models.py               — Pydantic v2 기반의 전체 스키마 응답/아이템 데이터 모델 정의
-  transport.py            — httpx 동기/비동기 클라이언트 래핑 및 API 호출 로직
+  transport.py            — httpx 비동기 클라이언트 및 API 호출 로직
   py.typed                — PEP 561 호환 타입 정보 마커 파일
 tests/
   unit/                   — Respx를 이용한 오프라인 Mocking 단위 테스트
@@ -65,7 +65,7 @@ tests/
 2. **API 키 평문 커밋 금지**: 서비스 키 주입은 `DATA_GO_KR_SERVICE_KEY` 환경변수 또는 클라이언트 생성자 인자(`api_key="..."`)로 제한하며 절대 코드에 키를 하드코딩하지 않는다.
 3. **타입 어노테이션 누락 금지**: 모든 함수 시그니처와 클래스 변수 등에 명확한 타입을 정의한다. Mypy strict 모드 통과 필수.
 4. **Pydantic v1 스타일 코드 작성 금지**: peer/dev 환경 모두 Pydantic v2 이상을 사용하므로, v1 스타일의 헬퍼나 구식 스키마 정의(`class Config`)를 배제하고 v2 스타일(`model_config`)을 준수한다.
-5. **동기/비동기 API 혼합 금지**: httpx의 동기 클라이언트와 비동기 클라이언트 호출이 한 곳에 엉키지 않도록 `transport.py`를 통해 격리 및 깔끔한 제어를 유지한다.
+5. **동기/비동기 API 혼합 금지**: 네트워크 전송은 `transport.py`의 AsyncHttpxTransport로 통일하고 동기 HTTP 호출을 추가하지 않는다.
 6. **불필요한 캐시 디렉토리 커밋 금지**: `.mypy_cache`, `.pytest_cache`, `.ruff_cache`, `.venv`는 반드시 gitignore하며 실수로 스테이징에 올리지 않는다.
 
 ## 5. 자주 묻는 작업

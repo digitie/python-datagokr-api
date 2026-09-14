@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datagokr._ratelimit import AsyncTokenBucket
 from datagokr.catalog import (
     SERVICE_KEY_ENV_NAMES,
     SERVICE_KEY_PARAM,
@@ -73,6 +74,7 @@ __all__ = [
     "AgriWeatherObservationStation",
     "AgriWeatherService",
     "ApiCatalogEntry",
+    "AsyncTokenBucket",
     "CulturalFestivalService",
     "DataGoKrClient",
     "DataGoKrConfig",

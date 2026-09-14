@@ -25,6 +25,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0",
+  "pytest-asyncio>=0.23",
   "respx>=0.20",
   "ruff>=0.4",
   "mypy>=1.9",
@@ -45,6 +46,8 @@ packages = ["src/datagokr"]
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"
 testpaths = ["tests"]
+asyncio_mode = "auto"
+pythonpath = ["src"]
 markers = [
   "live: tests that call data.go.kr public endpoints",
 ]

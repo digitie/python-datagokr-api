@@ -23,14 +23,14 @@ def _api_key() -> str | None:
         ("special_street", "stret_nm"),
     ],
 )
-def test_live_standard_endpoint_returns_items(service_name: str, name_attr: str) -> None:
+async def test_live_standard_endpoint_returns_items(service_name: str, name_attr: str) -> None:
     api_key = _api_key()
     if not api_key:
         pytest.skip("data.go.kr service key is required")
 
-    with DataGoKrClient(api_key=api_key) as client:
+    async with DataGoKrClient(api_key=api_key) as client:
         service = getattr(client, service_name)
-        page = service.list(num_of_rows=3)
+        page = await service.list(num_of_rows=3)
 
     assert page.total_count >= len(page.items)
     assert page.items

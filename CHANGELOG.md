@@ -8,6 +8,13 @@
 ## [Unreleased]
 
 ### Changed
+- DataGoKrClient의 모든 조회·debug·저장을 async로 전환하고 페이지 순회를 async for로 제공한다.
+- close()/동기 context manager를 aclose()/async with로 교체한다.
+- 동일 AsyncTokenBucket으로 전체 서비스·HTTP 재시도·redirect의 TPS를 제어한다.
+- max_rps(기본 5)와 공유 rate_limiter를 지원하고 전송 오류의 인증키 노출을 방지한다.
+
+
+### Changed
 
 - 문서 구조를 형제 저장소(`kor-travel-geo`) 컨벤션에 맞춰 재정리. `README.md`에
   배지, 제공 표면 표, 먼저 읽을 문서 표, 법적 고지를 추가하고 `docs/decisions.md`,

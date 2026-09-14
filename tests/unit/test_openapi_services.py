@@ -14,15 +14,15 @@ class FakeTransport:
         self.responses = list(responses)
         self.calls: list[tuple[str, dict[str, Any] | None]] = []
 
-    def get(self, path: str, params: dict[str, Any] | None = None) -> bytes:
+    async def get(self, path: str, params: dict[str, Any] | None = None) -> bytes:
         self.calls.append((path, params))
         return self.responses.pop(0)
 
-    def close(self) -> None:
+    async def aclose(self) -> None:
         pass
 
 
-def test_agri_weather_station_list_parses_xml_response() -> None:
+async def test_agri_weather_station_list_parses_xml_response() -> None:
     transport = FakeTransport(
         """
         <response>
@@ -52,7 +52,7 @@ def test_agri_weather_station_list_parses_xml_response() -> None:
     )
     service = AgriWeatherService(transport=transport)
 
-    page = service.station_list(num_of_rows=10, obsr_spot_nm="구례")
+    page = await service.station_list(num_of_rows=10, obsr_spot_nm="구례")
 
     assert page.total_count == 1
     assert page.items[0].obsr_spot_code == "542805A001"
@@ -64,7 +64,7 @@ def test_agri_weather_station_list_parses_xml_response() -> None:
     )
 
 
-def test_kwater_sluice_hour_list_parses_json_response() -> None:
+async def test_kwater_sluice_hour_list_parses_json_response() -> None:
     transport = FakeTransport(
         """
         {
@@ -95,7 +95,7 @@ def test_kwater_sluice_hour_list_parses_json_response() -> None:
     )
     service = KwaterSluiceService(transport=transport)
 
-    page = service.hour_list(
+    page = await service.hour_list(
         damcode="2022510",
         stdt="2018-10-01",
         eddt="2018-10-01",

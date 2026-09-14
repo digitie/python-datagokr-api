@@ -16,7 +16,7 @@ modules stay in sync instead of drifting independently.
 from __future__ import annotations
 
 import json
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from typing import Any, Protocol, TypeVar
 from xml.etree import ElementTree
 
@@ -97,13 +97,13 @@ class _PageLike(Protocol):
 PageT = TypeVar("PageT", bound=_PageLike)
 
 
-def iter_pages(
-    list_fn: Callable[..., PageT],
+async def iter_pages(
+    list_fn: Callable[..., Awaitable[PageT]],
     *,
     num_of_rows: Any,
     max_pages: int | None,
     filters: Mapping[str, Any],
-) -> Iterator[PageT]:
+) -> AsyncIterator[PageT]:
     """Page through ``list_fn`` until an end-of-results condition is hit.
 
     ``list_fn`` is expected to accept ``page_no``/``num_of_rows`` keyword
@@ -120,7 +120,7 @@ def iter_pages(
     page_no = 1
     seen = 0
     while True:
-        page = list_fn(page_no=page_no, num_of_rows=num_of_rows, **filters)
+        page = await list_fn(page_no=page_no, num_of_rows=num_of_rows, **filters)
         yield page
         seen += len(page.items)
         if not page.items:
@@ -160,13 +160,14 @@ def _reached_known_end(page: Any, *, seen: int, total_count_known: bool) -> bool
     return seen >= total_count
 
 
-def iter_all(
-    iter_pages_fn: Callable[..., Iterator[PageT]],
+async def iter_all(
+    iter_pages_fn: Callable[..., AsyncIterator[PageT]],
     *,
     num_of_rows: Any,
     max_pages: int | None,
     filters: Mapping[str, Any],
-) -> Iterator[Any]:
+) -> AsyncIterator[Any]:
     """Flatten ``iter_pages_fn``'s pages into a single item stream."""
-    for page in iter_pages_fn(num_of_rows=num_of_rows, max_pages=max_pages, **filters):
-        yield from page.items
+    async for page in iter_pages_fn(num_of_rows=num_of_rows, max_pages=max_pages, **filters):
+        for item in page.items:
+            yield item

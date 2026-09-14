@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import weakref
 from collections.abc import Mapping
 from types import TracebackType
 from typing import Any
 
+from datagokr._ratelimit import AsyncTokenBucket
 from datagokr.catalog import get_api_catalog_entry
 from datagokr.config import DataGoKrConfig
 from datagokr.debug import DebugRun, debug_error, jsonable, redact_sensitive
@@ -18,15 +18,11 @@ from datagokr.services import (
     TouristAttractionService,
 )
 from datagokr.services.file_data import FileDataService
-from datagokr.transport import SyncHttpxTransport
+from datagokr.transport import AsyncHttpxTransport
 
 
 class DataGoKrClient:
-    """Synchronous facade for selected data.go.kr standard open APIs.
-
-    Holds a pooled ``httpx.Client``; use as a context manager or call
-    ``close()`` explicitly to release its connections/file descriptors.
-    """
+    """서비스별 async 조회를 제공한다. async with 또는 aclose()로 연결을 닫는다."""
 
     def __init__(
         self,
@@ -34,35 +30,33 @@ class DataGoKrClient:
         api_key: str | None = None,
         base_url: str | None = None,
         timeout: float | None = None,
+        max_rps: float = 5.0,
+        rate_limiter: AsyncTokenBucket | None = None,
     ) -> None:
         self.config = DataGoKrConfig.from_env(
             api_key=api_key,
             base_url=base_url,
             timeout=timeout,
+            max_rps=max_rps,
         )
-        self._transport = SyncHttpxTransport(self.config)
-        try:
-            self.museum_art = MuseumArtGalleryService(transport=self._transport)
-            self.parking = ParkingLotService(transport=self._transport)
-            self.tourist_attraction = TouristAttractionService(transport=self._transport)
-            self.festival = CulturalFestivalService(transport=self._transport)
-            self.special_street = SpecialStreetService(transport=self._transport)
-            self.file_data = FileDataService(transport=self._transport)
-            self.agri_weather = AgriWeatherService(transport=self._transport)
-            self.kwater_sluice = KwaterSluiceService(transport=self._transport)
-        except Exception:
-            self._transport.close()
-            raise
+        self._transport = AsyncHttpxTransport(self.config, rate_limiter=rate_limiter)
+        self.museum_art = MuseumArtGalleryService(transport=self._transport)
+        self.parking = ParkingLotService(transport=self._transport)
+        self.tourist_attraction = TouristAttractionService(transport=self._transport)
+        self.festival = CulturalFestivalService(transport=self._transport)
+        self.special_street = SpecialStreetService(transport=self._transport)
+        self.file_data = FileDataService(transport=self._transport)
+        self.agri_weather = AgriWeatherService(transport=self._transport)
+        self.kwater_sluice = KwaterSluiceService(transport=self._transport)
         self.closed = False
-        weakref.finalize(self, self._transport.close)
 
-    def save_to_local(self, file_path: str, content: bytes) -> None:
-        """Save content to the local filesystem."""
+    async def save_to_local(self, file_path: str, content: bytes) -> None:
+        """바이트를 로컬 파일에 비동기로 저장한다."""
         from datagokr.storage import save_to_local as _save_local
 
-        _save_local(file_path, content)
+        await _save_local(file_path, content)
 
-    def save_to_rustfs(
+    async def save_to_rustfs(
         self,
         file_path: str,
         content: bytes,
@@ -74,13 +68,10 @@ class DataGoKrClient:
         access_key_id: str | None = None,
         secret_access_key: str | None = None,
     ) -> None:
-        """Save content to both local filesystem and RustFS object storage.
-
-        Falls back to client config values for unspecified S3 options.
-        """
+        """로컬 파일과 RustFS에 비동기로 저장한다. 생략한 옵션은 설정에서 가져온다."""
         from datagokr.storage import save_to_rustfs as _save_rustfs
 
-        _save_rustfs(
+        await _save_rustfs(
             file_path,
             content,
             bucket=(bucket or self.config.rustfs_bucket),
@@ -91,7 +82,7 @@ class DataGoKrClient:
             secret_access_key=(secret_access_key or self.config.rustfs_secret_access_key),
         )
 
-    def debug_fetch(
+    async def debug_fetch(
         self,
         service_key: str,
         *,
@@ -146,7 +137,7 @@ class DataGoKrClient:
         trace.append(f"호출: {entry.service_attr}.{entry.list_method}(**kwargs)")
 
         try:
-            page = method(**call_kwargs)
+            page = await method(**call_kwargs)
         except Exception as exc:
             trace.append(f"실행 실패: {exc.__class__.__name__}")
             return DebugRun(
@@ -174,19 +165,19 @@ class DataGoKrClient:
             catalog=entry,
         )
 
-    def __enter__(self) -> DataGoKrClient:
+    async def __aenter__(self) -> DataGoKrClient:
         return self
 
-    def __exit__(
+    async def __aexit__(
         self,
         exc_type: type[BaseException] | None,
         exc: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        self.close()
+        await self.aclose()
 
-    def close(self) -> None:
-        self._transport.close()
+    async def aclose(self) -> None:
+        await self._transport.aclose()
         self.closed = True
 
 
