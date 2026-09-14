@@ -32,14 +32,14 @@ class FakePage:
 def _pager(pages: list[FakePage]) -> tuple[Any, list[int]]:
     requested: list[int] = []
 
-    def list_fn(*, page_no: int, num_of_rows: Any, **_filters: Any) -> FakePage:
+    async def list_fn(*, page_no: int, num_of_rows: Any, **_filters: Any) -> FakePage:
         requested.append(page_no)
         return pages[page_no - 1]
 
     return list_fn, requested
 
 
-def test_a_filtered_full_page_does_not_end_the_stream() -> None:
+async def test_a_filtered_full_page_does_not_end_the_stream() -> None:
     # 30 rows upstream, 10 per page, but page 1 lost one row to validation.
     list_fn, requested = _pager(
         [
@@ -49,13 +49,13 @@ def test_a_filtered_full_page_does_not_end_the_stream() -> None:
         ]
     )
 
-    pages = list(iter_pages(list_fn, num_of_rows=10, max_pages=None, filters={}))
+    pages = [item async for item in iter_pages(list_fn, num_of_rows=10, max_pages=None, filters={})]
 
     assert requested == [1, 2, 3]
     assert sum(len(page.items) for page in pages) == 29
 
 
-def test_a_short_page_that_accounts_for_the_total_ends_the_stream() -> None:
+async def test_a_short_page_that_accounts_for_the_total_ends_the_stream() -> None:
     list_fn, requested = _pager(
         [
             FakePage(items=[object()] * 10, num_of_rows=10, total_count=14),
@@ -63,13 +63,13 @@ def test_a_short_page_that_accounts_for_the_total_ends_the_stream() -> None:
         ]
     )
 
-    pages = list(iter_pages(list_fn, num_of_rows=10, max_pages=None, filters={}))
+    pages = [item async for item in iter_pages(list_fn, num_of_rows=10, max_pages=None, filters={})]
 
     assert requested == [1, 2]
     assert sum(len(page.items) for page in pages) == 14
 
 
-def test_without_a_trustworthy_total_an_empty_page_ends_the_stream() -> None:
+async def test_without_a_trustworthy_total_an_empty_page_ends_the_stream() -> None:
     # StandardOpenApiService.list sets total_count_known=False when upstream
     # omitted totalCount. A short page then proves nothing.
     list_fn, requested = _pager(
@@ -80,13 +80,13 @@ def test_without_a_trustworthy_total_an_empty_page_ends_the_stream() -> None:
         ]
     )
 
-    pages = list(iter_pages(list_fn, num_of_rows=10, max_pages=None, filters={}))
+    pages = [item async for item in iter_pages(list_fn, num_of_rows=10, max_pages=None, filters={})]
 
     assert requested == [1, 2, 3]
     assert sum(len(page.items) for page in pages) == 18
 
 
-def test_max_pages_still_caps_the_walk() -> None:
+async def test_max_pages_still_caps_the_walk() -> None:
     list_fn, requested = _pager(
         [
             FakePage(items=[object()] * 9, num_of_rows=10, total_count=100),
@@ -95,6 +95,6 @@ def test_max_pages_still_caps_the_walk() -> None:
         ]
     )
 
-    list(iter_pages(list_fn, num_of_rows=10, max_pages=2, filters={}))
+    [item async for item in iter_pages(list_fn, num_of_rows=10, max_pages=2, filters={})]
 
     assert requested == [1, 2]

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import sys
@@ -156,14 +157,16 @@ def _raw_response_tab(selected: ApiCatalogEntry, api_key: str, *, timeout: float
         return
 
     try:
-        with DataGoKrClient(api_key=api_key, timeout=timeout) as client:
-            run = client.debug_fetch(
-                selected.key,
-                params=params,
-                page_no=request_options["page_no"],
-                num_of_rows=request_options["num_of_rows"],
-                response_type=request_options["response_type"],
-            )
+        async def fetch() -> DebugRun:
+            async with DataGoKrClient(api_key=api_key, timeout=timeout) as client:
+                return await client.debug_fetch(
+                    selected.key,
+                    params=params,
+                    page_no=request_options["page_no"],
+                    num_of_rows=request_options["num_of_rows"],
+                    response_type=request_options["response_type"],
+                )
+        run = asyncio.run(fetch())
     except Exception as exc:  # pragma: no cover - UI 표시
         st.error(str(exc))
         return

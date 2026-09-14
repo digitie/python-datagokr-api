@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping
+from collections.abc import AsyncIterator, Mapping
 from typing import Any, Generic, TypeVar
 
 from pydantic import TypeAdapter, ValidationError
@@ -17,7 +17,7 @@ from datagokr.models import (
     StandardPage,
 )
 from datagokr.services import pagination
-from datagokr.transport import SyncTransport
+from datagokr.transport import AsyncTransport
 
 MUSEUM_ART_GALLERY_ENDPOINT = "tn_pubr_public_museum_artgr_info_api"
 PARKING_LOT_ENDPOINT = "tn_pubr_prkplce_info_api"
@@ -36,7 +36,7 @@ class StandardOpenApiService(Generic[T]):
     def __init__(
         self,
         *,
-        transport: SyncTransport,
+        transport: AsyncTransport,
         endpoint: str,
         model_type: type[T],
     ) -> None:
@@ -45,7 +45,7 @@ class StandardOpenApiService(Generic[T]):
         self._model_type = model_type
         self._adapter: TypeAdapter[T] = TypeAdapter(model_type)
 
-    def list(
+    async def list(
         self,
         *,
         page_no: int = 1,
@@ -64,7 +64,7 @@ class StandardOpenApiService(Generic[T]):
             response_type=response_type,
             filters=filters,
         )
-        payload = pagination.parse_response(self._transport.get(self.endpoint, params=params))
+        payload = pagination.parse_response(await self._transport.get(self.endpoint, params=params))
         body = _response_body(payload)
         header = _response_header(payload)
         _raise_for_error(header, payload)
@@ -93,7 +93,7 @@ class StandardOpenApiService(Generic[T]):
         num_of_rows: int = DEFAULT_MAX_PAGE_SIZE,
         max_pages: int | None = DEFAULT_MAX_PAGES,
         **filters: Any,
-    ) -> Iterator[StandardPage[T]]:
+    ) -> AsyncIterator[StandardPage[T]]:
         return pagination.iter_pages(
             self.list, num_of_rows=num_of_rows, max_pages=max_pages, filters=filters
         )
@@ -104,14 +104,14 @@ class StandardOpenApiService(Generic[T]):
         num_of_rows: int = DEFAULT_MAX_PAGE_SIZE,
         max_pages: int | None = DEFAULT_MAX_PAGES,
         **filters: Any,
-    ) -> Iterator[T]:
+    ) -> AsyncIterator[T]:
         return pagination.iter_all(
             self.iter_pages, num_of_rows=num_of_rows, max_pages=max_pages, filters=filters
         )
 
 
 class MuseumArtGalleryService(StandardOpenApiService[PublicMuseumArtGallery]):
-    def __init__(self, *, transport: SyncTransport) -> None:
+    def __init__(self, *, transport: AsyncTransport) -> None:
         super().__init__(
             transport=transport,
             endpoint=MUSEUM_ART_GALLERY_ENDPOINT,
@@ -120,7 +120,7 @@ class MuseumArtGalleryService(StandardOpenApiService[PublicMuseumArtGallery]):
 
 
 class ParkingLotService(StandardOpenApiService[PublicParkingLot]):
-    def __init__(self, *, transport: SyncTransport) -> None:
+    def __init__(self, *, transport: AsyncTransport) -> None:
         super().__init__(
             transport=transport,
             endpoint=PARKING_LOT_ENDPOINT,
@@ -129,7 +129,7 @@ class ParkingLotService(StandardOpenApiService[PublicParkingLot]):
 
 
 class TouristAttractionService(StandardOpenApiService[PublicTouristAttraction]):
-    def __init__(self, *, transport: SyncTransport) -> None:
+    def __init__(self, *, transport: AsyncTransport) -> None:
         super().__init__(
             transport=transport,
             endpoint=TOURIST_ATTRACTION_ENDPOINT,
@@ -138,7 +138,7 @@ class TouristAttractionService(StandardOpenApiService[PublicTouristAttraction]):
 
 
 class SpecialStreetService(StandardOpenApiService[PublicSpecialStreet]):
-    def __init__(self, *, transport: SyncTransport) -> None:
+    def __init__(self, *, transport: AsyncTransport) -> None:
         super().__init__(
             transport=transport,
             endpoint=SPECIAL_STREET_ENDPOINT,
@@ -147,7 +147,7 @@ class SpecialStreetService(StandardOpenApiService[PublicSpecialStreet]):
 
 
 class CulturalFestivalService(StandardOpenApiService[PublicCulturalFestival]):
-    def __init__(self, *, transport: SyncTransport) -> None:
+    def __init__(self, *, transport: AsyncTransport) -> None:
         super().__init__(
             transport=transport,
             endpoint=CULTURAL_FESTIVAL_ENDPOINT,

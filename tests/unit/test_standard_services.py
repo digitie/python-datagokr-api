@@ -24,15 +24,15 @@ class FakeTransport:
         self.responses = list(responses)
         self.calls: list[tuple[str, dict[str, Any] | None]] = []
 
-    def get(self, path: str, params: dict[str, Any] | None = None) -> bytes:
+    async def get(self, path: str, params: dict[str, Any] | None = None) -> bytes:
         self.calls.append((path, params))
         return self.responses.pop(0)
 
-    def close(self) -> None:
+    async def aclose(self) -> None:
         pass
 
 
-def test_museum_art_service_parses_standard_json_response() -> None:
+async def test_museum_art_service_parses_standard_json_response() -> None:
     transport = FakeTransport(
         """
         {
@@ -59,7 +59,7 @@ def test_museum_art_service_parses_standard_json_response() -> None:
     )
     service = MuseumArtGalleryService(transport=transport)
 
-    page = service.list(page_no=1, num_of_rows=100, fcltyNm="Sample")
+    page = await service.list(page_no=1, num_of_rows=100, fcltyNm="Sample")
 
     assert page.total_count == 1
     assert page.items[0].fclty_nm == "Sample Museum"
@@ -71,7 +71,7 @@ def test_museum_art_service_parses_standard_json_response() -> None:
     )
 
 
-def test_parking_service_accepts_xml_response() -> None:
+async def test_parking_service_accepts_xml_response() -> None:
     transport = FakeTransport(
         b"""
         <response>
@@ -93,7 +93,7 @@ def test_parking_service_accepts_xml_response() -> None:
     )
     service = ParkingLotService(transport=transport)
 
-    page = service.list(page_no=1, num_of_rows=100, response_type="xml")
+    page = await service.list(page_no=1, num_of_rows=100, response_type="xml")
 
     assert page.items[0].prkplce_no == "P-1"
     assert page.items[0].prkplce_nm == "Central Parking"
@@ -101,7 +101,7 @@ def test_parking_service_accepts_xml_response() -> None:
     assert transport.calls[0][0] == PARKING_LOT_ENDPOINT
 
 
-def test_parking_service_parses_fractional_time_fields() -> None:
+async def test_parking_service_parses_fractional_time_fields() -> None:
     # live 실측(2026-06-11, #6): addUnitTime이 '0.5' 같은 분수로 오는 row가 있다.
     transport = FakeTransport(
         b"""
@@ -128,7 +128,7 @@ def test_parking_service_parses_fractional_time_fields() -> None:
     )
     service = ParkingLotService(transport=transport)
 
-    page = service.list(page_no=1, num_of_rows=100)
+    page = await service.list(page_no=1, num_of_rows=100)
 
     item = page.items[0]
     assert item.basic_time == 0.5
@@ -136,7 +136,7 @@ def test_parking_service_parses_fractional_time_fields() -> None:
     assert item.add_unit_charge == 500
 
 
-def test_parking_service_coerces_free_form_charge_fields() -> None:
+async def test_parking_service_coerces_free_form_charge_fields() -> None:
     # live 실측(2026-06-12, #8): addUnitCharge가 '200+400' 같은 자유 표기로 오는 row가 있다.
     # 산술 평가는 의미 왜곡이므로 비숫자는 None, 원본은 raw에 보존된다.
     transport = FakeTransport(
@@ -166,7 +166,7 @@ def test_parking_service_coerces_free_form_charge_fields() -> None:
     )
     service = ParkingLotService(transport=transport)
 
-    page = service.list(page_no=1, num_of_rows=100)
+    page = await service.list(page_no=1, num_of_rows=100)
 
     item = page.items[0]
     assert item.add_unit_charge is None
@@ -177,7 +177,7 @@ def test_parking_service_coerces_free_form_charge_fields() -> None:
     assert item.raw["addUnitCharge"] == "200+400"
 
 
-def test_iter_pages_stops_at_max_pages() -> None:
+async def test_iter_pages_stops_at_max_pages() -> None:
     body = b"""
     {
       "response": {
@@ -194,14 +194,14 @@ def test_iter_pages_stops_at_max_pages() -> None:
     transport = FakeTransport(body, body)
     service = TouristAttractionService(transport=transport)
 
-    pages = list(service.iter_pages(num_of_rows=2, max_pages=2))
+    pages = [item async for item in service.iter_pages(num_of_rows=2, max_pages=2)]
 
     assert len(pages) == 2
     assert transport.calls[0][0] == TOURIST_ATTRACTION_ENDPOINT
     assert transport.calls[1][1]["pageNo"] == 2
 
 
-def test_special_street_service_parses_standard_json_response() -> None:
+async def test_special_street_service_parses_standard_json_response() -> None:
     transport = FakeTransport(
         """
         {
@@ -234,7 +234,7 @@ def test_special_street_service_parses_standard_json_response() -> None:
     )
     service = SpecialStreetService(transport=transport)
 
-    page = service.list(page_no=1, num_of_rows=100, stretNm="음식")
+    page = await service.list(page_no=1, num_of_rows=100, stretNm="음식")
 
     item = page.items[0]
     assert item.stret_nm == "광릉숲음식문화특화테마거리"
@@ -249,7 +249,7 @@ def test_special_street_service_parses_standard_json_response() -> None:
     )
 
 
-def test_api_error_raises() -> None:
+async def test_api_error_raises() -> None:
     transport = FakeTransport(
         b"""
         {
@@ -263,6 +263,6 @@ def test_api_error_raises() -> None:
     service = CulturalFestivalService(transport=transport)
 
     with pytest.raises(ApiErrorResponse, match="30"):
-        service.list()
+        await service.list()
 
     assert transport.calls[0][0] == CULTURAL_FESTIVAL_ENDPOINT

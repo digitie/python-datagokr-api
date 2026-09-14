@@ -24,6 +24,7 @@ class DataGoKrConfig:
     api_key: str | None
     base_url: str = DEFAULT_DATA_GO_KR_BASE_URL
     timeout: float = DEFAULT_TIMEOUT_SECONDS
+    max_rps: float = 5.0
     rustfs_endpoint_url: str | None = None
     rustfs_access_key_id: str | None = None
     rustfs_secret_access_key: str | None = None
@@ -37,6 +38,7 @@ class DataGoKrConfig:
         api_key: str | None = None,
         base_url: str | None = None,
         timeout: float | str | None = None,
+        max_rps: float = 5.0,
         rustfs_endpoint_url: str | None = None,
         rustfs_access_key_id: str | None = None,
         rustfs_secret_access_key: str | None = None,
@@ -86,6 +88,7 @@ class DataGoKrConfig:
         return cls(
             api_key=(resolved_api_key or None),
             base_url=resolved_base_url,
+            max_rps=max_rps,
             timeout=_resolve_timeout(
                 timeout if timeout is not None else os.getenv("DATAGOKR_TIMEOUT")
             ),

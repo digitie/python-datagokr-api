@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import pathlib
 from typing import Any
 
 
-def save_to_local(file_path: str, content: bytes) -> None:
+def _save_to_local(file_path: str, content: bytes) -> None:
     """Save content to the local filesystem.
 
     If the target directory does not exist, it will be created automatically.
@@ -26,7 +27,7 @@ def _import_boto3() -> Any:
         raise RuntimeError("boto3가 필요합니다. pip install boto3를 실행하세요.") from exc
 
 
-def save_to_rustfs(
+def _save_to_rustfs(
     file_path: str,
     content: bytes,
     *,
@@ -44,7 +45,7 @@ def save_to_rustfs(
     falling back to standard defaults if not specified.
     """
     # 1. Save locally first
-    save_to_local(file_path, content)
+    _save_to_local(file_path, content)
 
     # 2. Resolve RustFS S3 settings
     resolved_bucket = (
@@ -97,3 +98,27 @@ def save_to_rustfs(
         raise RuntimeError(
             f"RustFS 업로드 실패 (bucket={resolved_bucket!r}, key={resolved_key!r}): {exc}"
         ) from exc
+
+
+async def save_to_local(file_path: str, content: bytes) -> None:
+    """로컬 파일 쓰기를 작업 스레드에서 수행한다."""
+    await asyncio.to_thread(_save_to_local, file_path, content)
+
+
+async def save_to_rustfs(
+    file_path: str,
+    content: bytes,
+    *,
+    bucket: str | None = None,
+    object_key: str | None = None,
+    region_name: str | None = None,
+    endpoint_url: str | None = None,
+    access_key_id: str | None = None,
+    secret_access_key: str | None = None,
+) -> None:
+    """로컬 저장과 선택적 boto3 업로드를 작업 스레드에서 수행한다."""
+    await asyncio.to_thread(
+        _save_to_rustfs, file_path, content, bucket=bucket, object_key=object_key,
+        region_name=region_name, endpoint_url=endpoint_url,
+        access_key_id=access_key_id, secret_access_key=secret_access_key,
+    )

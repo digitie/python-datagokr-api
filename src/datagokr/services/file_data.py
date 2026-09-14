@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator, Mapping
+from collections.abc import AsyncIterator, Mapping
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
@@ -11,7 +11,7 @@ from pydantic import TypeAdapter
 from datagokr.config import DEFAULT_MAX_PAGE_SIZE
 from datagokr.exceptions import ApiErrorResponse, UnknownDatasetError, ValidationError
 from datagokr.models import PublicFileDataRecord, StandardPage
-from datagokr.transport import SyncTransport
+from datagokr.transport import AsyncTransport
 
 ODCLOUD_BASE_URL = "https://api.odcloud.kr/api"
 
@@ -117,7 +117,7 @@ def get_file_dataset(slug: str) -> FileDataCatalogEntry:
 class FileDataService:
     """data.go.kr 파일데이터 자동변환 API의 raw row 서비스."""
 
-    def __init__(self, *, transport: SyncTransport) -> None:
+    def __init__(self, *, transport: AsyncTransport) -> None:
         self._transport = transport
         self._adapter: TypeAdapter[PublicFileDataRecord] = TypeAdapter(
             PublicFileDataRecord
@@ -126,7 +126,7 @@ class FileDataService:
     def datasets(self) -> tuple[FileDataCatalogEntry, ...]:
         return tuple(FILE_DATASETS.values())
 
-    def list(
+    async def list(
         self,
         dataset: str | FileDataCatalogEntry,
         *,
@@ -141,7 +141,7 @@ class FileDataService:
 
         entry = dataset if isinstance(dataset, FileDataCatalogEntry) else get_file_dataset(dataset)
         params = _request_params(page_no=page_no, per_page=per_page, filters=filters)
-        payload = _parse_response(self._transport.get(entry.endpoint_url, params=params))
+        payload = _parse_response(await self._transport.get(entry.endpoint_url, params=params))
         _raise_for_error(payload)
         raw_items = _payload_items(payload)
         items = [
@@ -155,17 +155,17 @@ class FileDataService:
             items=items,
         )
 
-    def iter_pages(
+    async def iter_pages(
         self,
         dataset: str | FileDataCatalogEntry,
         *,
         per_page: int = DEFAULT_MAX_PAGE_SIZE,
         max_pages: int | None = None,
         **filters: Any,
-    ) -> Iterator[StandardPage[PublicFileDataRecord]]:
+    ) -> AsyncIterator[StandardPage[PublicFileDataRecord]]:
         page_no = 1
         while True:
-            page = self.list(dataset, page_no=page_no, per_page=per_page, **filters)
+            page = await self.list(dataset, page_no=page_no, per_page=per_page, **filters)
             yield page
             if not page.items:
                 return
@@ -178,36 +178,37 @@ class FileDataService:
                 return
             page_no += 1
 
-    def iter_all(
+    async def iter_all(
         self,
         dataset: str | FileDataCatalogEntry,
         *,
         per_page: int = DEFAULT_MAX_PAGE_SIZE,
         max_pages: int | None = None,
         **filters: Any,
-    ) -> Iterator[PublicFileDataRecord]:
-        for page in self.iter_pages(
+    ) -> AsyncIterator[PublicFileDataRecord]:
+        async for page in self.iter_pages(
             dataset, per_page=per_page, max_pages=max_pages, **filters
         ):
-            yield from page.items
+            for item in page.items:
+                yield item
 
-    def seoul_bookstores(self, **kwargs: Any) -> StandardPage[PublicFileDataRecord]:
-        return self.list("datagokr_seoul_bookstores", **kwargs)
+    async def seoul_bookstores(self, **kwargs: Any) -> StandardPage[PublicFileDataRecord]:
+        return await self.list("datagokr_seoul_bookstores", **kwargs)
 
-    def gyeonggi_muslim_friendly_restaurants(
+    async def gyeonggi_muslim_friendly_restaurants(
         self, **kwargs: Any
     ) -> StandardPage[PublicFileDataRecord]:
-        return self.list("datagokr_gyeonggi_muslim_friendly_restaurants", **kwargs)
+        return await self.list("datagokr_gyeonggi_muslim_friendly_restaurants", **kwargs)
 
-    def ansan_world_restaurants(
+    async def ansan_world_restaurants(
         self, **kwargs: Any
     ) -> StandardPage[PublicFileDataRecord]:
-        return self.list("datagokr_ansan_world_restaurants", **kwargs)
+        return await self.list("datagokr_ansan_world_restaurants", **kwargs)
 
-    def jeju_local_restaurants(
+    async def jeju_local_restaurants(
         self, **kwargs: Any
     ) -> StandardPage[PublicFileDataRecord]:
-        return self.list("datagokr_jeju_local_restaurants", **kwargs)
+        return await self.list("datagokr_jeju_local_restaurants", **kwargs)
 
 
 def _request_params(

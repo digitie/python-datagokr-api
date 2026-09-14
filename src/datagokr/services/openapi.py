@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping
+from collections.abc import AsyncIterator, Mapping
 from typing import Any, Generic, TypeVar
 
 from pydantic import TypeAdapter
@@ -14,7 +14,7 @@ from datagokr.models import (
     StandardItem,
 )
 from datagokr.services import pagination
-from datagokr.transport import SyncTransport
+from datagokr.transport import AsyncTransport
 
 AGRI_WEATHER_STATION_ENDPOINT = "https://apis.data.go.kr/1390802/AgriWeather/getObsrSpotList"
 KWATER_SLUICE_HOUR_ENDPOINT = (
@@ -36,7 +36,7 @@ class DataGoKrOpenApiService(Generic[T]):
     def __init__(
         self,
         *,
-        transport: SyncTransport,
+        transport: AsyncTransport,
         endpoint: str,
         model_type: type[T],
         page_no_param: str = "pageNo",
@@ -66,7 +66,7 @@ class DataGoKrOpenApiService(Generic[T]):
         """실제 요청 URL에 실리는 페이지당 행 수 쿼리 파라미터명입니다."""
         return self._num_rows_param
 
-    def list(
+    async def list(
         self,
         *,
         page_no: int = 1,
@@ -91,7 +91,7 @@ class DataGoKrOpenApiService(Generic[T]):
             if value not in (None, ""):
                 params[key] = value
 
-        payload = pagination.parse_response(self._transport.get(self.endpoint, params=params))
+        payload = pagination.parse_response(await self._transport.get(self.endpoint, params=params))
         body = _response_body(payload)
         header = _response_header(payload)
         _raise_for_error(header, payload)
@@ -117,7 +117,7 @@ class DataGoKrOpenApiService(Generic[T]):
         num_of_rows: int | None = None,
         max_pages: int | None = None,
         **filters: Any,
-    ) -> Iterator[OpenApiPage[T]]:
+    ) -> AsyncIterator[OpenApiPage[T]]:
         return pagination.iter_pages(
             self.list, num_of_rows=num_of_rows, max_pages=max_pages, filters=filters
         )
@@ -128,7 +128,7 @@ class DataGoKrOpenApiService(Generic[T]):
         num_of_rows: int | None = None,
         max_pages: int | None = None,
         **filters: Any,
-    ) -> Iterator[T]:
+    ) -> AsyncIterator[T]:
         return pagination.iter_all(
             self.iter_pages, num_of_rows=num_of_rows, max_pages=max_pages, filters=filters
         )
@@ -137,7 +137,7 @@ class DataGoKrOpenApiService(Generic[T]):
 class AgriWeatherService:
     """농촌진흥청 국립농업과학원 농업기상 OpenAPI facade."""
 
-    def __init__(self, *, transport: SyncTransport) -> None:
+    def __init__(self, *, transport: AsyncTransport) -> None:
         self.observation_stations = DataGoKrOpenApiService[AgriWeatherObservationStation](
             transport=transport,
             endpoint=AGRI_WEATHER_STATION_ENDPOINT,
@@ -150,7 +150,7 @@ class AgriWeatherService:
             default_num_of_rows=10,
         )
 
-    def station_list(
+    async def station_list(
         self,
         *,
         page_no: int = 1,
@@ -161,7 +161,7 @@ class AgriWeatherService:
         mgc_code: str | None = None,
         obsr_begin_datetm: str | None = None,
     ) -> OpenApiPage[AgriWeatherObservationStation]:
-        return self.observation_stations.list(
+        return await self.observation_stations.list(
             page_no=page_no,
             num_of_rows=num_of_rows,
             Obsr_Spot_Nm=obsr_spot_nm,
@@ -175,7 +175,7 @@ class AgriWeatherService:
 class KwaterSluiceService:
     """한국수자원공사 수문 운영 정보 OpenAPI facade."""
 
-    def __init__(self, *, transport: SyncTransport) -> None:
+    def __init__(self, *, transport: AsyncTransport) -> None:
         self.hourly = DataGoKrOpenApiService[KwaterSluiceRecord](
             transport=transport,
             endpoint=KWATER_SLUICE_HOUR_ENDPOINT,
@@ -192,7 +192,7 @@ class KwaterSluiceService:
             model_type=KwaterSluiceRecord,
         )
 
-    def hour_list(
+    async def hour_list(
         self,
         *,
         damcode: str,
@@ -201,7 +201,7 @@ class KwaterSluiceService:
         page_no: int = 1,
         num_of_rows: int = 10,
     ) -> OpenApiPage[KwaterSluiceRecord]:
-        page = self.hourly.list(
+        page = await self.hourly.list(
             page_no=page_no,
             num_of_rows=num_of_rows,
             damcode=damcode,
@@ -210,7 +210,7 @@ class KwaterSluiceService:
         )
         return _with_damcode(page, damcode)
 
-    def ten_minute_list(
+    async def ten_minute_list(
         self,
         *,
         damcode: str,
@@ -219,7 +219,7 @@ class KwaterSluiceService:
         page_no: int = 1,
         num_of_rows: int = 10,
     ) -> OpenApiPage[KwaterSluiceRecord]:
-        page = self.ten_minutes.list(
+        page = await self.ten_minutes.list(
             page_no=page_no,
             num_of_rows=num_of_rows,
             damcode=damcode,
@@ -228,7 +228,7 @@ class KwaterSluiceService:
         )
         return _with_damcode(page, damcode)
 
-    def day_list(
+    async def day_list(
         self,
         *,
         damcode: str,
@@ -237,7 +237,7 @@ class KwaterSluiceService:
         page_no: int = 1,
         num_of_rows: int = 10,
     ) -> OpenApiPage[KwaterSluiceRecord]:
-        page = self.daily.list(
+        page = await self.daily.list(
             page_no=page_no,
             num_of_rows=num_of_rows,
             damcode=damcode,
