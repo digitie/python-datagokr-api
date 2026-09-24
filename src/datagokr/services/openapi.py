@@ -279,7 +279,16 @@ def _response_body(payload: Mapping[str, Any]) -> Mapping[str, Any]:
 def _response_header(payload: Mapping[str, Any]) -> Mapping[str, Any]:
     response = payload.get("response", payload)
     if isinstance(response, Mapping):
-        header = response.get("header") or response.get("Header") or {}
+        header = response.get("header") or response.get("Header")
+        if isinstance(header, Mapping):
+            return header
+    # data.go.kr gateway errors can be returned as an HTTP 200 XML
+    # ``OpenAPI_ServiceResponse`` envelope rather than the endpoint's normal
+    # ``response.header`` shape.  Treating one as an empty page would conceal
+    # authentication and quota failures from every TAGO caller.
+    gateway = payload.get("OpenAPI_ServiceResponse")
+    if isinstance(gateway, Mapping):
+        header = gateway.get("cmmMsgHeader")
         if isinstance(header, Mapping):
             return header
     return {}
@@ -437,5 +446,9 @@ def _tago_date(value: date | str) -> str:
     if isinstance(value, date):
         return value.strftime("%Y%m%d")
     if re.fullmatch(r"[0-9]{8}", value):
+        try:
+            date.fromisoformat(f"{value[:4]}-{value[4:6]}-{value[6:]}")
+        except ValueError as exc:
+            raise ValueError("departure_date must be a valid calendar date") from exc
         return value
     raise ValueError("departure_date must be a date or YYYYMMDD string")

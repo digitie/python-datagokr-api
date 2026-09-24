@@ -162,6 +162,22 @@ async def test_tago_error_envelope_and_invalid_date_are_explicit() -> None:
         )
 
 
+async def test_tago_xml_gateway_error_and_invalid_calendar_date_are_explicit() -> None:
+    transport = FakeTransport(
+        b"<OpenAPI_ServiceResponse><cmmMsgHeader><returnReasonCode>22</returnReasonCode><returnAuthMsg>LIMITED</returnAuthMsg></cmmMsgHeader></OpenAPI_ServiceResponse>"
+    )
+    service = TagoIntercityBusService(transport=transport)
+
+    with pytest.raises(ApiErrorResponse, match="22: LIMITED"):
+        await service.terminal_list()
+    with pytest.raises(ValueError, match="valid calendar date"):
+        await service.timetable_list(
+            departure_terminal_id="A",
+            arrival_terminal_id="B",
+            departure_date="20260230",
+        )
+
+
 async def test_client_exposes_both_tago_bus_services() -> None:
     client = DataGoKrClient(api_key="test-secret")
 
