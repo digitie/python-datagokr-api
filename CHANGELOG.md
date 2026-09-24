@@ -7,6 +7,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- `DataGoKrClient.express_bus`와 `DataGoKrClient.intercity_bus`에 TAGO 터미널·도시·등급
+  목록과 출발/도착 터미널 기준 운행정보 typed async 조회를 추가한다.
+
 ### Changed
 - DataGoKrClient의 모든 조회·debug·저장을 async로 전환하고 페이지 순회를 async for로 제공한다.
 - close()/동기 context manager를 aclose()/async with로 교체한다.

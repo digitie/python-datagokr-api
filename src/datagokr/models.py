@@ -252,3 +252,36 @@ class KwaterSluiceRecord(StandardItem):
     rsvwtqy: float | None = None
     rsvwtrt: float | None = None
     damcode: str | None = None
+
+
+class TagoBusTerminal(StandardItem):
+    """TAGO 고속·시외버스 터미널 목록 항목."""
+
+    terminal_id: str | None = Field(default=None, alias="terminalId")
+    terminal_name: str | None = Field(default=None, alias="terminalNm")
+
+
+class TagoBusCity(StandardItem):
+    """TAGO 고속·시외버스 도시 코드 항목."""
+
+    city_code: str | None = Field(default=None, alias="citycode")
+    city_name: str | None = Field(default=None, alias="cityname")
+
+
+class TagoBusClass(StandardItem):
+    """TAGO 고속·시외버스 등급 항목."""
+
+    grade_id: str | None = Field(default=None, alias="gradeId")
+    grade_name: str | None = Field(default=None, alias="gradeNm")
+
+
+class TagoBusTimetable(StandardItem):
+    """TAGO 출발·도착 터미널 기준 버스 배차 항목."""
+
+    route_id: str | None = Field(default=None, alias="routeId")
+    dep_place_name: str | None = Field(default=None, alias="depPlaceNm")
+    arr_place_name: str | None = Field(default=None, alias="arrPlaceNm")
+    dep_planned_time: str | None = Field(default=None, alias="depPlandTime")
+    arr_planned_time: str | None = Field(default=None, alias="arrPlandTime")
+    grade_name: str | None = Field(default=None, alias="gradeNm")
+    adult_charge: int | None = Field(default=None, alias="adultCharge")

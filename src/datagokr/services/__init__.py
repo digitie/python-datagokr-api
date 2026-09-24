@@ -8,12 +8,22 @@ from datagokr.services.file_data import (
 )
 from datagokr.services.openapi import (
     AGRI_WEATHER_STATION_ENDPOINT,
+    EXPRESS_BUS_CITY_ENDPOINT,
+    EXPRESS_BUS_CLASS_ENDPOINT,
+    EXPRESS_BUS_TERMINAL_ENDPOINT,
+    EXPRESS_BUS_TIMETABLE_ENDPOINT,
+    INTERCITY_BUS_CITY_ENDPOINT,
+    INTERCITY_BUS_CLASS_ENDPOINT,
+    INTERCITY_BUS_TERMINAL_ENDPOINT,
+    INTERCITY_BUS_TIMETABLE_ENDPOINT,
     KWATER_SLUICE_DAY_ENDPOINT,
     KWATER_SLUICE_HOUR_ENDPOINT,
     KWATER_SLUICE_TEN_MINUTE_ENDPOINT,
     AgriWeatherService,
     DataGoKrOpenApiService,
     KwaterSluiceService,
+    TagoExpressBusService,
+    TagoIntercityBusService,
 )
 from datagokr.services.standard import (
     CULTURAL_FESTIVAL_ENDPOINT,
@@ -32,7 +42,15 @@ from datagokr.services.standard import (
 __all__ = [
     "AGRI_WEATHER_STATION_ENDPOINT",
     "CULTURAL_FESTIVAL_ENDPOINT",
+    "EXPRESS_BUS_CITY_ENDPOINT",
+    "EXPRESS_BUS_CLASS_ENDPOINT",
+    "EXPRESS_BUS_TERMINAL_ENDPOINT",
+    "EXPRESS_BUS_TIMETABLE_ENDPOINT",
     "FILE_DATASETS",
+    "INTERCITY_BUS_CITY_ENDPOINT",
+    "INTERCITY_BUS_CLASS_ENDPOINT",
+    "INTERCITY_BUS_TERMINAL_ENDPOINT",
+    "INTERCITY_BUS_TIMETABLE_ENDPOINT",
     "KWATER_SLUICE_DAY_ENDPOINT",
     "KWATER_SLUICE_HOUR_ENDPOINT",
     "KWATER_SLUICE_TEN_MINUTE_ENDPOINT",
@@ -50,6 +68,8 @@ __all__ = [
     "ParkingLotService",
     "SpecialStreetService",
     "StandardOpenApiService",
+    "TagoExpressBusService",
+    "TagoIntercityBusService",
     "TouristAttractionService",
     "get_file_dataset",
 ]

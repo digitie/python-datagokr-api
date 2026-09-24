@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import re
 from collections.abc import AsyncIterator, Mapping
+from datetime import date
 from typing import Any, Generic, TypeVar
 
 from pydantic import TypeAdapter
@@ -12,6 +14,10 @@ from datagokr.models import (
     KwaterSluiceRecord,
     OpenApiPage,
     StandardItem,
+    TagoBusCity,
+    TagoBusClass,
+    TagoBusTerminal,
+    TagoBusTimetable,
 )
 from datagokr.services import pagination
 from datagokr.transport import AsyncTransport
@@ -25,6 +31,20 @@ KWATER_SLUICE_TEN_MINUTE_ENDPOINT = (
 )
 KWATER_SLUICE_DAY_ENDPOINT = (
     "https://apis.data.go.kr/B500001/dam/sluicePresentCondition/daylist"
+)
+EXPRESS_BUS_TERMINAL_ENDPOINT = (
+    "https://apis.data.go.kr/1613000/ExpBusInfoService/getExpBusTrminlList"
+)
+EXPRESS_BUS_CITY_ENDPOINT = "https://apis.data.go.kr/1613000/ExpBusInfoService/getCtyCodeList"
+EXPRESS_BUS_CLASS_ENDPOINT = "https://apis.data.go.kr/1613000/ExpBusInfoService/getBusGradeList"
+EXPRESS_BUS_TIMETABLE_ENDPOINT = "https://apis.data.go.kr/1613000/ExpBusInfoService/getStrtpntAlocFnd"
+INTERCITY_BUS_TERMINAL_ENDPOINT = (
+    "https://apis.data.go.kr/1613000/IntercityBusInfoService/getSttnList"
+)
+INTERCITY_BUS_CITY_ENDPOINT = "https://apis.data.go.kr/1613000/IntercityBusInfoService/getCtyCodeList"
+INTERCITY_BUS_CLASS_ENDPOINT = "https://apis.data.go.kr/1613000/IntercityBusInfoService/getBusGradeList"
+INTERCITY_BUS_TIMETABLE_ENDPOINT = (
+    "https://apis.data.go.kr/1613000/IntercityBusInfoService/getStrtpntAlocFnd"
 )
 
 T = TypeVar("T", bound=StandardItem)
@@ -305,3 +325,117 @@ def _with_damcode(
         if item.damcode is None:
             item.damcode = damcode
     return page
+
+
+class _TagoBusService:
+    """TAGO 버스 서비스가 공통으로 쓰는 typed OpenAPI facade."""
+
+    def __init__(
+        self,
+        *,
+        transport: AsyncTransport,
+        terminal_endpoint: str,
+        city_endpoint: str,
+        class_endpoint: str,
+        timetable_endpoint: str,
+    ) -> None:
+        self.terminals = DataGoKrOpenApiService[TagoBusTerminal](
+            transport=transport,
+            endpoint=terminal_endpoint,
+            model_type=TagoBusTerminal,
+        )
+        self.cities = DataGoKrOpenApiService[TagoBusCity](
+            transport=transport,
+            endpoint=city_endpoint,
+            model_type=TagoBusCity,
+        )
+        self.classes = DataGoKrOpenApiService[TagoBusClass](
+            transport=transport,
+            endpoint=class_endpoint,
+            model_type=TagoBusClass,
+        )
+        self.timetables = DataGoKrOpenApiService[TagoBusTimetable](
+            transport=transport,
+            endpoint=timetable_endpoint,
+            model_type=TagoBusTimetable,
+        )
+
+    async def terminal_list(
+        self,
+        *,
+        terminal_name: str | None = None,
+        page_no: int = 1,
+        num_of_rows: int = 10,
+    ) -> OpenApiPage[TagoBusTerminal]:
+        return await self.terminals.list(
+            page_no=page_no,
+            num_of_rows=num_of_rows,
+            terminalNm=terminal_name,
+        )
+
+    async def city_list(
+        self,
+        *,
+        page_no: int = 1,
+        num_of_rows: int = 10,
+    ) -> OpenApiPage[TagoBusCity]:
+        return await self.cities.list(page_no=page_no, num_of_rows=num_of_rows)
+
+    async def class_list(
+        self,
+        *,
+        page_no: int = 1,
+        num_of_rows: int = 10,
+    ) -> OpenApiPage[TagoBusClass]:
+        return await self.classes.list(page_no=page_no, num_of_rows=num_of_rows)
+
+    async def timetable_list(
+        self,
+        *,
+        departure_terminal_id: str,
+        arrival_terminal_id: str,
+        departure_date: date | str,
+        page_no: int = 1,
+        num_of_rows: int = 10,
+    ) -> OpenApiPage[TagoBusTimetable]:
+        return await self.timetables.list(
+            page_no=page_no,
+            num_of_rows=num_of_rows,
+            depTerminalId=departure_terminal_id,
+            arrTerminalId=arrival_terminal_id,
+            depPlandTime=_tago_date(departure_date),
+        )
+
+
+class TagoExpressBusService(_TagoBusService):
+    """국토교통부 TAGO 고속버스정보(15098522) facade."""
+
+    def __init__(self, *, transport: AsyncTransport) -> None:
+        super().__init__(
+            transport=transport,
+            terminal_endpoint=EXPRESS_BUS_TERMINAL_ENDPOINT,
+            city_endpoint=EXPRESS_BUS_CITY_ENDPOINT,
+            class_endpoint=EXPRESS_BUS_CLASS_ENDPOINT,
+            timetable_endpoint=EXPRESS_BUS_TIMETABLE_ENDPOINT,
+        )
+
+
+class TagoIntercityBusService(_TagoBusService):
+    """국토교통부 TAGO 시외버스정보(15098541) facade."""
+
+    def __init__(self, *, transport: AsyncTransport) -> None:
+        super().__init__(
+            transport=transport,
+            terminal_endpoint=INTERCITY_BUS_TERMINAL_ENDPOINT,
+            city_endpoint=INTERCITY_BUS_CITY_ENDPOINT,
+            class_endpoint=INTERCITY_BUS_CLASS_ENDPOINT,
+            timetable_endpoint=INTERCITY_BUS_TIMETABLE_ENDPOINT,
+        )
+
+
+def _tago_date(value: date | str) -> str:
+    if isinstance(value, date):
+        return value.strftime("%Y%m%d")
+    if re.fullmatch(r"[0-9]{8}", value):
+        return value
+    raise ValueError("departure_date must be a date or YYYYMMDD string")
