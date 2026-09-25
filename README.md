@@ -69,9 +69,11 @@ async with DataGoKrClient(max_rps=5) as client:
 ```
 
 `client.express_bus`와 `client.intercity_bus`는 각각 `terminal_list()`, `city_list()`,
-`class_list()`, `timetable_list()`를 제공한다. `timetable_list()`의 출발일은 `date` 또는
-`YYYYMMDD` 문자열로 전달하며, 시외버스 운행정보는 제공기관 안내에 따라 현재 당일 배차만
-제공될 수 있다.
+`class_list()`, `timetable_list()`를 제공한다. `terminal_list()`는 paging을 지원하며
+`iter_terminals()`로 전체 기준정보를 순회할 수 있다. 도시·등급 목록은 제공기관이 paging
+파라미터 없이 한 번에 제공하므로 한 요청으로 끝낸다. `timetable_list()`의 출발일은 `date`
+또는 `YYYYMMDD` 문자열로 전달한다. 시외버스 운행정보는 제공기관의 현재 정책상
+`Asia/Seoul` 기준 당일 배차만 제공하므로, 다른 날짜는 원격 호출 전에 `ValueError`로 거부한다.
 
 인증키는 `DataGoKrClient(api_key="...")`로 직접 넘기거나 `DATA_GO_KR_SERVICE_KEY`
 환경변수에 설정합니다. data.go.kr 엔드포인트 서비스키 환경변수는 형제 저장소와

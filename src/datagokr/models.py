@@ -259,13 +259,14 @@ class TagoBusTerminal(StandardItem):
 
     terminal_id: str | None = Field(default=None, alias="terminalId")
     terminal_name: str | None = Field(default=None, alias="terminalNm")
+    city_name: str | None = Field(default=None, alias="cityName")
 
 
 class TagoBusCity(StandardItem):
     """TAGO 고속·시외버스 도시 코드 항목."""
 
-    city_code: str | None = Field(default=None, alias="citycode")
-    city_name: str | None = Field(default=None, alias="cityname")
+    city_code: str | None = Field(default=None, alias="cityCode")
+    city_name: str | None = Field(default=None, alias="cityName")
 
 
 class TagoBusClass(StandardItem):
@@ -284,4 +285,4 @@ class TagoBusTimetable(StandardItem):
     dep_planned_time: str | None = Field(default=None, alias="depPlandTime")
     arr_planned_time: str | None = Field(default=None, alias="arrPlandTime")
     grade_name: str | None = Field(default=None, alias="gradeNm")
-    adult_charge: int | None = Field(default=None, alias="adultCharge")
+    adult_charge: int | None = Field(default=None, alias="charge")

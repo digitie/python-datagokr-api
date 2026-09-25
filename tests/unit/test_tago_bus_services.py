@@ -51,14 +51,14 @@ def _response(items: list[dict[str, Any]]) -> bytes:
 async def test_express_bus_reference_lists_are_typed_and_paginated() -> None:
     transport = FakeTransport(
         _response([{"terminalId": "NAEK010", "terminalNm": "서울경부"}]),
-        _response([{"citycode": "110", "cityname": "서울"}]),
+        _response([{"cityCode": "110", "cityName": "서울"}]),
         _response([{"gradeId": "1", "gradeNm": "프리미엄"}]),
     )
     service = TagoExpressBusService(transport=transport)
 
     terminals = await service.terminal_list(terminal_name="서울", num_of_rows=10)
-    cities = await service.city_list(num_of_rows=10)
-    classes = await service.class_list(num_of_rows=10)
+    cities = await service.city_list()
+    classes = await service.class_list()
 
     assert terminals.total_count == 1
     assert terminals.items[0].terminal_id == "NAEK010"
@@ -69,8 +69,8 @@ async def test_express_bus_reference_lists_are_typed_and_paginated() -> None:
             EXPRESS_BUS_TERMINAL_ENDPOINT,
             {"pageNo": 1, "numOfRows": 10, "_type": "json", "terminalNm": "서울"},
         ),
-        (EXPRESS_BUS_CITY_ENDPOINT, {"pageNo": 1, "numOfRows": 10, "_type": "json"}),
-        (EXPRESS_BUS_CLASS_ENDPOINT, {"pageNo": 1, "numOfRows": 10, "_type": "json"}),
+        (EXPRESS_BUS_CITY_ENDPOINT, {"_type": "json"}),
+        (EXPRESS_BUS_CLASS_ENDPOINT, {"_type": "json"}),
     ]
 
 
@@ -85,7 +85,7 @@ async def test_express_bus_timetable_serializes_typed_date_and_response() -> Non
                     "depPlandTime": "20260925060000",
                     "arrPlandTime": "20260925094000",
                     "gradeNm": "우등",
-                    "adultCharge": "38000",
+                    "charge": "38000",
                 }
             ]
         )
@@ -126,7 +126,7 @@ async def test_intercity_bus_uses_its_own_tago_endpoints() -> None:
     page = await service.timetable_list(
         departure_terminal_id="123",
         arrival_terminal_id="456",
-        departure_date="20260925",
+        departure_date=date.today(),
         num_of_rows=20,
     )
 
@@ -141,7 +141,7 @@ async def test_intercity_bus_uses_its_own_tago_endpoints() -> None:
             "_type": "json",
             "depTerminalId": "123",
             "arrTerminalId": "456",
-            "depPlandTime": "20260925",
+                "depPlandTime": date.today().strftime("%Y%m%d"),
         },
     )
 
@@ -158,8 +158,37 @@ async def test_tago_error_envelope_and_invalid_date_are_explicit() -> None:
         await service.timetable_list(
             departure_terminal_id="A",
             arrival_terminal_id="B",
-            departure_date="2026-09-25",
+        departure_date=date.today().isoformat(),
         )
+
+
+async def test_intercity_bus_rejects_non_today_before_provider_call() -> None:
+    transport = FakeTransport()
+    service = TagoIntercityBusService(transport=transport)
+
+    with pytest.raises(ValueError, match="only for today"):
+        await service.timetable_list(
+            departure_terminal_id="A",
+            arrival_terminal_id="B",
+            departure_date=date(2000, 1, 1),
+        )
+    assert transport.calls == []
+
+
+async def test_tago_terminal_iterator_uses_paged_endpoint() -> None:
+    transport = FakeTransport(
+        _response([{"terminalId": "A", "terminalNm": "가"}]),
+        _response([]),
+    )
+    service = TagoExpressBusService(transport=transport)
+
+    terminals = [item async for item in service.iter_terminals(num_of_rows=1)]
+
+    assert [item.terminal_id for item in terminals] == ["A"]
+    assert transport.calls[0] == (
+        EXPRESS_BUS_TERMINAL_ENDPOINT,
+        {"pageNo": 1, "numOfRows": 1, "_type": "json"},
+    )
 
 
 async def test_tago_xml_gateway_error_and_invalid_calendar_date_are_explicit() -> None:
