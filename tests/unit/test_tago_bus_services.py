@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
-from datetime import date
+from datetime import date, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -126,7 +127,7 @@ async def test_intercity_bus_uses_its_own_tago_endpoints() -> None:
     page = await service.timetable_list(
         departure_terminal_id="123",
         arrival_terminal_id="456",
-        departure_date=date.today(),
+        departure_date=_seoul_today(),
         num_of_rows=20,
     )
 
@@ -141,7 +142,7 @@ async def test_intercity_bus_uses_its_own_tago_endpoints() -> None:
             "_type": "json",
             "depTerminalId": "123",
             "arrTerminalId": "456",
-                "depPlandTime": date.today().strftime("%Y%m%d"),
+                "depPlandTime": _seoul_today().strftime("%Y%m%d"),
         },
     )
 
@@ -158,7 +159,7 @@ async def test_tago_error_envelope_and_invalid_date_are_explicit() -> None:
         await service.timetable_list(
             departure_terminal_id="A",
             arrival_terminal_id="B",
-        departure_date=date.today().isoformat(),
+        departure_date=_seoul_today().isoformat(),
         )
 
 
@@ -214,3 +215,7 @@ async def test_client_exposes_both_tago_bus_services() -> None:
     assert isinstance(client.intercity_bus, TagoIntercityBusService)
 
     await client.aclose()
+
+
+def _seoul_today() -> date:
+    return datetime.now(ZoneInfo("Asia/Seoul")).date()
