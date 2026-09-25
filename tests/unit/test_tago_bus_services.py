@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import date, datetime
 from typing import Any
-from zoneinfo import ZoneInfo
+from unittest.mock import patch
 
 import pytest
 
@@ -124,14 +124,17 @@ async def test_intercity_bus_uses_its_own_tago_endpoints() -> None:
         _response([]),
     )
     service = TagoIntercityBusService(transport=transport)
+    service_date = date(2026, 9, 25)
 
-    terminals = await service.terminal_list()
-    page = await service.timetable_list(
-        departure_terminal_id="123",
-        arrival_terminal_id="456",
-        departure_date=_seoul_today(),
-        num_of_rows=20,
-    )
+    with patch("datagokr.services.openapi.datetime") as mocked_datetime:
+        mocked_datetime.now.return_value = datetime(2026, 9, 25, 12)
+        terminals = await service.terminal_list()
+        page = await service.timetable_list(
+            departure_terminal_id="123",
+            arrival_terminal_id="456",
+            departure_date=service_date,
+            num_of_rows=20,
+        )
 
     assert terminals.items[0].terminal_name == "강릉"
     assert not page.items
@@ -144,7 +147,7 @@ async def test_intercity_bus_uses_its_own_tago_endpoints() -> None:
             "_type": "json",
             "depTerminalId": "123",
             "arrTerminalId": "456",
-                "depPlandTime": _seoul_today().strftime("%Y%m%d"),
+            "depPlandTime": service_date.strftime("%Y%m%d"),
         },
     )
 
@@ -161,7 +164,7 @@ async def test_tago_error_envelope_and_invalid_date_are_explicit() -> None:
         await service.timetable_list(
             departure_terminal_id="A",
             arrival_terminal_id="B",
-        departure_date=_seoul_today().isoformat(),
+            departure_date="2026-09-25",
         )
 
 
@@ -206,7 +209,7 @@ async def test_tago_endpoint_specific_filters_are_explicit() -> None:
         await TagoIntercityBusService(transport=FakeTransport()).timetable_list(
             departure_terminal_id="A",
             arrival_terminal_id="B",
-            departure_date=_seoul_today(),
+            departure_date=date(2026, 9, 25),
             bus_grade_id="1",
         )
 
@@ -234,7 +237,3 @@ async def test_client_exposes_both_tago_bus_services() -> None:
     assert isinstance(client.intercity_bus, TagoIntercityBusService)
 
     await client.aclose()
-
-
-def _seoul_today() -> date:
-    return datetime.now(ZoneInfo("Asia/Seoul")).date()
