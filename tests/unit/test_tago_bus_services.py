@@ -97,6 +97,7 @@ async def test_express_bus_timetable_serializes_typed_date_and_response() -> Non
         departure_terminal_id="NAEK010",
         arrival_terminal_id="NAEK020",
         departure_date=date(2026, 9, 25),
+        bus_grade_id="1",
     )
 
     assert page.items[0].adult_charge == 38000
@@ -111,6 +112,7 @@ async def test_express_bus_timetable_serializes_typed_date_and_response() -> Non
                 "depTerminalId": "NAEK010",
                 "arrTerminalId": "NAEK020",
                 "depPlandTime": "20260925",
+                "busGradeId": "1",
             },
         )
     ]
@@ -190,6 +192,23 @@ async def test_tago_terminal_iterator_uses_paged_endpoint() -> None:
         EXPRESS_BUS_TERMINAL_ENDPOINT,
         {"pageNo": 1, "numOfRows": 1, "_type": "json"},
     )
+
+
+async def test_tago_endpoint_specific_filters_are_explicit() -> None:
+    transport = FakeTransport(_response([{"terminalId": "A", "terminalNm": "가"}]))
+    express = TagoExpressBusService(transport=transport)
+
+    with pytest.raises(ValueError, match="city_code"):
+        await express.terminal_list(city_code="11")
+    assert transport.calls == []
+
+    with pytest.raises(ValueError, match="bus_grade_id"):
+        await TagoIntercityBusService(transport=FakeTransport()).timetable_list(
+            departure_terminal_id="A",
+            arrival_terminal_id="B",
+            departure_date=_seoul_today(),
+            bus_grade_id="1",
+        )
 
 
 async def test_tago_xml_gateway_error_and_invalid_calendar_date_are_explicit() -> None:

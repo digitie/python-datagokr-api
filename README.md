@@ -165,8 +165,8 @@ TripMate 문서에서 별도 `python-*-api` 소유가 없는 data.go.kr OpenAPI�
 
 - 농촌진흥청 국립농업과학원 농업기상 관측지점 상세정보: `1390802/AgriWeather/getObsrSpotList`
 - 한국수자원공사 수문 운영 정보: `B500001/dam/sluicePresentCondition/*`
-- 국토교통부 TAGO 고속버스정보: `1613000/ExpBusInfoService/*` (데이터셋 `15098522`)
-- 국토교통부 TAGO 시외버스정보: `1613000/IntercityBusInfoService/*` (데이터셋 `15098541`)
+- 국토교통부 TAGO 고속버스정보: `1613000/ExpBusInfo/*` (데이터셋 `15098522`)
+- 국토교통부 TAGO 시외버스정보: `1613000/SuburbsBusInfo/*` (데이터셋 `15098541`)
 
 ## 디렉터리 개요
 

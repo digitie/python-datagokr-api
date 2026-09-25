@@ -342,6 +342,8 @@ class _TagoBusService:
         city_endpoint: str,
         class_endpoint: str,
         timetable_endpoint: str,
+        supports_terminal_city_code: bool,
+        supports_bus_grade: bool,
     ) -> None:
         self.terminals = DataGoKrOpenApiService[TagoBusTerminal](
             transport=transport,
@@ -351,6 +353,8 @@ class _TagoBusService:
         self._transport = transport
         self._city_endpoint = city_endpoint
         self._class_endpoint = class_endpoint
+        self._supports_terminal_city_code = supports_terminal_city_code
+        self._supports_bus_grade = supports_bus_grade
         self._city_adapter: TypeAdapter[TagoBusCity] = TypeAdapter(TagoBusCity)
         self._class_adapter: TypeAdapter[TagoBusClass] = TypeAdapter(TagoBusClass)
         self.timetables = DataGoKrOpenApiService[TagoBusTimetable](
@@ -367,11 +371,13 @@ class _TagoBusService:
         page_no: int = 1,
         num_of_rows: int = 10,
     ) -> OpenApiPage[TagoBusTerminal]:
+        if city_code is not None and not self._supports_terminal_city_code:
+            raise ValueError("city_code is supported only by intercity bus terminals")
         return await self.terminals.list(
             page_no=page_no,
             num_of_rows=num_of_rows,
             terminalNm=terminal_name,
-            cityCode=city_code,
+            cityCode=city_code if self._supports_terminal_city_code else None,
         )
 
     def iter_terminals(
@@ -382,9 +388,11 @@ class _TagoBusService:
         num_of_rows: int | None = None,
         max_pages: int | None = None,
     ) -> AsyncIterator[TagoBusTerminal]:
+        if city_code is not None and not self._supports_terminal_city_code:
+            raise ValueError("city_code is supported only by intercity bus terminals")
         return self.terminals.iter_all(
             terminalNm=terminal_name,
-            cityCode=city_code,
+            cityCode=city_code if self._supports_terminal_city_code else None,
             num_of_rows=num_of_rows,
             max_pages=max_pages,
         )
@@ -401,9 +409,12 @@ class _TagoBusService:
         departure_terminal_id: str,
         arrival_terminal_id: str,
         departure_date: date | str,
+        bus_grade_id: str | None = None,
         page_no: int = 1,
         num_of_rows: int = 10,
     ) -> OpenApiPage[TagoBusTimetable]:
+        if bus_grade_id is not None and not self._supports_bus_grade:
+            raise ValueError("bus_grade_id is supported only by express bus timetables")
         service_date, serialized_date = _tago_date(departure_date)
         self._validate_service_date(service_date)
         return await self.timetables.list(
@@ -412,6 +423,7 @@ class _TagoBusService:
             depTerminalId=departure_terminal_id,
             arrTerminalId=arrival_terminal_id,
             depPlandTime=serialized_date,
+            busGradeId=bus_grade_id if self._supports_bus_grade else None,
         )
 
     async def _unpaged_reference_list(
@@ -443,6 +455,8 @@ class TagoExpressBusService(_TagoBusService):
             city_endpoint=EXPRESS_BUS_CITY_ENDPOINT,
             class_endpoint=EXPRESS_BUS_CLASS_ENDPOINT,
             timetable_endpoint=EXPRESS_BUS_TIMETABLE_ENDPOINT,
+            supports_terminal_city_code=False,
+            supports_bus_grade=True,
         )
 
 
@@ -456,6 +470,8 @@ class TagoIntercityBusService(_TagoBusService):
             city_endpoint=INTERCITY_BUS_CITY_ENDPOINT,
             class_endpoint=INTERCITY_BUS_CLASS_ENDPOINT,
             timetable_endpoint=INTERCITY_BUS_TIMETABLE_ENDPOINT,
+            supports_terminal_city_code=True,
+            supports_bus_grade=False,
         )
 
     def _validate_service_date(self, service_date: date) -> None:
