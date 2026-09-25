@@ -8,7 +8,7 @@
 (data.go.kr) 표준데이터 Open API, 파일데이터 자동변환 API, 개별 OpenAPI 일부를 감싸는 작은
 typed Python client 라이브러리입니다. `DataGoKrClient`는 async 전용 인터페이스로 서비스별
 속성(`museum_art`, `parking`, `tourist_attraction`, `festival`, `special_street`,
-`file_data`, `agri_weather`, `kwater_sluice`)을 제공하며, 모든 응답을 Pydantic v2 모델로
+`file_data`, `agri_weather`, `kwater_sluice`, `express_bus`, `intercity_bus`)을 제공하며, 모든 응답을 Pydantic v2 모델로
 typed 변환합니다.
 
 최근 변경 사항은 [`CHANGELOG.md`](CHANGELOG.md)의 `[Unreleased]`를 참고합니다.
@@ -20,6 +20,7 @@ typed 변환합니다.
 | 표준데이터 5종 | `client.museum_art` / `client.parking` / `client.tourist_attraction` / `client.festival` / `client.special_street` | 박물관미술관·주차장·관광지·문화축제·지역특화거리 표준데이터 Open API |
 | 파일데이터 자동변환 4종 | `client.file_data` | 서울 책방, 경기 무슬림 친화 음식점, 안산 세계맛집, 제주 향토음식점 raw row 보존 조회 |
 | 개별 OpenAPI 2종 | `client.agri_weather` / `client.kwater_sluice` | 농업기상 관측지점 상세정보, 한국수자원공사 수문 운영 정보 |
+| TAGO 버스 2종 | `client.express_bus` / `client.intercity_bus` | 고속·시외버스 터미널·도시·등급 및 출발/도착지 기준 운행정보 |
 | 파일 저장 helper | `client.save_to_local()` / `client.save_to_rustfs()` | 다운로드한 바이트를 로컬/RustFS 객체 저장소에 저장 |
 
 ## 먼저 읽을 문서
@@ -58,7 +59,21 @@ async with DataGoKrClient(max_rps=5) as client:
 
     file_page = await client.file_data.ansan_world_restaurants(per_page=10)
     print(file_page.items[0].raw["가게명"])
+
+    timetable = await client.express_bus.timetable_list(
+        departure_terminal_id="NAEK010",
+        arrival_terminal_id="NAEK020",
+        departure_date="20260925",
+    )
+    print(timetable.items[0].dep_planned_time, timetable.items[0].adult_charge)
 ```
+
+`client.express_bus`와 `client.intercity_bus`는 각각 `terminal_list()`, `city_list()`,
+`class_list()`, `timetable_list()`를 제공한다. `terminal_list()`는 paging을 지원하며
+`iter_terminals()`로 전체 기준정보를 순회할 수 있다. 도시·등급 목록은 제공기관이 paging
+파라미터 없이 한 번에 제공하므로 한 요청으로 끝낸다. `timetable_list()`의 출발일은 `date`
+또는 `YYYYMMDD` 문자열로 전달한다. 시외버스 운행정보는 제공기관의 현재 정책상
+`Asia/Seoul` 기준 당일 배차만 제공하므로, 다른 날짜는 원격 호출 전에 `ValueError`로 거부한다.
 
 인증키는 `DataGoKrClient(api_key="...")`로 직접 넘기거나 `DATA_GO_KR_SERVICE_KEY`
 환경변수에 설정합니다. data.go.kr 엔드포인트 서비스키 환경변수는 형제 저장소와
@@ -150,6 +165,8 @@ TripMate 문서에서 별도 `python-*-api` 소유가 없는 data.go.kr OpenAPI�
 
 - 농촌진흥청 국립농업과학원 농업기상 관측지점 상세정보: `1390802/AgriWeather/getObsrSpotList`
 - 한국수자원공사 수문 운영 정보: `B500001/dam/sluicePresentCondition/*`
+- 국토교통부 TAGO 고속버스정보: `1613000/ExpBusInfo/*` (데이터셋 `15098522`)
+- 국토교통부 TAGO 시외버스정보: `1613000/SuburbsBusInfo/*` (데이터셋 `15098541`)
 
 ## 디렉터리 개요
 
@@ -159,7 +176,7 @@ TripMate 문서에서 별도 `python-*-api` 소유가 없는 data.go.kr OpenAPI�
 | `src/datagokr/config.py` | 환경변수·인증키·RustFS 설정 로딩 |
 | `src/datagokr/services/standard.py` | 표준데이터 5종 서비스 |
 | `src/datagokr/services/file_data.py` | 파일데이터 자동변환 카탈로그와 서비스 |
-| `src/datagokr/services/openapi.py` | 개별 OpenAPI(농업기상, 수문) 서비스 |
+| `src/datagokr/services/openapi.py` | 개별 OpenAPI(농업기상, 수문, TAGO 버스) 서비스 |
 | `src/datagokr/models.py` | Pydantic v2 응답 모델 |
 | `src/datagokr/transport.py` | httpx 기반 비동기 전송 계층 |
 | `src/datagokr/storage.py` | 로컬/RustFS 저장 helper |
