@@ -286,3 +286,12 @@ class TagoBusTimetable(StandardItem):
     arr_planned_time: str | None = Field(default=None, alias="arrPlandTime")
     grade_name: str | None = Field(default=None, alias="gradeNm")
     adult_charge: int | None = Field(default=None, alias="charge")
+
+    @field_validator("dep_planned_time", "arr_planned_time", mode="before")
+    @classmethod
+    def normalize_planned_time(cls, value: object) -> str | None:
+        """TAGO가 숫자로도 반환하는 운행 시각을 문자열로 통일한다."""
+
+        if value is None:
+            return None
+        return str(value)

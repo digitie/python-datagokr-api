@@ -83,8 +83,8 @@ async def test_express_bus_timetable_serializes_typed_date_and_response() -> Non
                     "routeId": "R001",
                     "depPlaceNm": "서울경부",
                     "arrPlaceNm": "부산",
-                    "depPlandTime": "20260925060000",
-                    "arrPlandTime": "20260925094000",
+                    "depPlandTime": 20260925060000,
+                    "arrPlandTime": 20260925094000,
                     "gradeNm": "우등",
                     "charge": "38000",
                 }
@@ -102,6 +102,8 @@ async def test_express_bus_timetable_serializes_typed_date_and_response() -> Non
 
     assert page.items[0].adult_charge == 38000
     assert page.items[0].dep_place_name == "서울경부"
+    assert page.items[0].dep_planned_time == "20260925060000"
+    assert page.items[0].arr_planned_time == "20260925094000"
     assert transport.calls == [
         (
             EXPRESS_BUS_TIMETABLE_ENDPOINT,
