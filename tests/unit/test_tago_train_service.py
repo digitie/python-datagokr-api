@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 from datagokr import DataGoKrClient, TagoTrainService
-from datagokr.exceptions import ApiErrorResponse
+from datagokr.exceptions import ApiErrorResponse, ResponseParseError
 from datagokr.services.openapi import (
     TRAIN_CITY_ENDPOINT,
     TRAIN_CLASS_ENDPOINT,
@@ -158,3 +158,96 @@ async def test_public_client_uses_shared_transport_and_closes() -> None:
     assert client.train._transport is client.express_bus._transport
     await client.aclose()
     assert client.closed
+
+
+async def call_service(service: TagoTrainService, method: str) -> Any:
+    if method == "city":
+        return await service.city_list()
+    if method == "class":
+        return await service.class_list()
+    if method == "station":
+        return await service.station_list(city_code="11")
+    return await service.timetable_list(
+        departure_station_id="A", arrival_station_id="B", departure_date="20260927",
+    )
+
+
+@pytest.mark.parametrize("method", ["city", "class", "station", "timetable"])
+@pytest.mark.parametrize("empty", [None, "", {}, []])
+async def test_empty_item_wrappers_are_not_phantom_rows(method: str, empty: object) -> None:
+    transport = FakeTransport(payload(empty, totalCount=0))
+    page = await call_service(TagoTrainService(transport=transport), method)
+    assert page.items == []
+    assert page.total_count == 0
+    assert len(transport.calls) == 1
+
+
+async def test_empty_xml_item_stops_iterator_after_one_call() -> None:
+    transport = FakeTransport(b'<response><header><resultCode>00</resultCode></header>'
+        b'<body><items><item/></items><totalCount>0</totalCount></body></response>')
+    iterator = TagoTrainService(transport=transport).iter_stations(city_code="11")
+    rows = [row async for row in iterator]
+    assert rows == []
+    assert len(transport.calls) == 1
+
+
+@pytest.mark.parametrize("method", ["city", "class", "station", "timetable"])
+@pytest.mark.parametrize("raw", [
+    {}, {"error": "temporarily unavailable"}, {"response": {}},
+    {"response": {"header": {"resultMsg": "OK"}, "body": {"items": ""}}},
+    {"response": {"header": {"resultCode": "00"}}},
+    {"response": {"header": {"resultCode": "00"}, "body": {}}},
+])
+async def test_malformed_envelopes_fail_closed(method: str, raw: object) -> None:
+    transport = FakeTransport(json.dumps(raw).encode())
+    with pytest.raises(ResponseParseError):
+        await call_service(TagoTrainService(transport=transport), method)
+
+
+@pytest.mark.parametrize("items,count", [
+    ({"nodeid": "A"}, 0), ([{}], 1), ([None], 1), ("bad", 1),
+    ([], True), ([], -1), ([], 1.5), ([], "bad"),
+])
+async def test_invalid_items_and_counts_fail_closed(items: object, count: object) -> None:
+    transport = FakeTransport(payload(items, totalCount=count))
+    with pytest.raises(ResponseParseError):
+        await TagoTrainService(transport=transport).station_list(city_code="11")
+
+
+async def test_unpaged_count_mismatch_is_not_a_complete_reference_list() -> None:
+    transport = FakeTransport(payload([], totalCount=3))
+    with pytest.raises(ResponseParseError):
+        await TagoTrainService(transport=transport).city_list()
+
+
+@pytest.mark.parametrize("method", ["city", "class", "station", "timetable"])
+async def test_explicit_no_data_code_is_empty_without_body(method: str) -> None:
+    transport = FakeTransport(b'{"response":{"header":{"resultCode":"03"}}}')
+    page = await call_service(TagoTrainService(transport=transport), method)
+    assert page.items == []
+    assert page.total_count == 0
+
+
+async def test_no_data_code_with_positive_count_fails_closed() -> None:
+    transport = FakeTransport(b'{"response":{"header":{"resultCode":"03"},'
+        b'"body":{"totalCount":1}}}')
+    with pytest.raises(ResponseParseError):
+        await TagoTrainService(transport=transport).city_list()
+
+
+@pytest.mark.parametrize("value", [True, False, -100, "-100"])
+async def test_invalid_fares_do_not_become_valid_prices(value: object) -> None:
+    from pydantic import ValidationError
+
+    transport = FakeTransport(payload({"trainno": "123", "adultcharge": value}, totalCount=1))
+    with pytest.raises(ValidationError):
+        await call_service(TagoTrainService(transport=transport), "timetable")
+
+
+@pytest.mark.parametrize("year,expected", [(1, "00010101"), (999, "09990101"), (2026, "20260101")])
+async def test_date_objects_are_always_eight_ascii_digits(year: int, expected: str) -> None:
+    transport = FakeTransport(payload([], totalCount=0))
+    await TagoTrainService(transport=transport).timetable_list(
+        departure_station_id="A", arrival_station_id="B", departure_date=date(year, 1, 1),
+    )
+    assert (transport.calls[0][1] or {})["depPlandTime"] == expected

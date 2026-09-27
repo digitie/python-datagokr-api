@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 from pydantic import TypeAdapter
 
 from datagokr.config import DEFAULT_MAX_PAGE_SIZE
-from datagokr.exceptions import ApiErrorResponse
+from datagokr.exceptions import ApiErrorResponse, ResponseParseError
 from datagokr.models import (
     AgriWeatherObservationStation,
     KwaterSluiceRecord,
@@ -68,6 +68,7 @@ class DataGoKrOpenApiService(Generic[T]):
         response_type_value: str | None = "json",
         body_item_keys: tuple[str, ...] = ("item", "items", "row", "data"),
         default_num_of_rows: int = 10,
+        strict_tago_response: bool = False,
     ) -> None:
         self._transport = transport
         self.endpoint = endpoint
@@ -78,6 +79,7 @@ class DataGoKrOpenApiService(Generic[T]):
         self._response_type_value = response_type_value
         self._body_item_keys = body_item_keys
         self._default_num_of_rows = default_num_of_rows
+        self._strict_tago_response = strict_tago_response
 
     @property
     def page_no_param(self) -> str:
@@ -115,10 +117,15 @@ class DataGoKrOpenApiService(Generic[T]):
                 params[key] = value
 
         payload = pagination.parse_response(await self._transport.get(self.endpoint, params=params))
-        body = _response_body(payload)
+        body = _tago_body(payload) if self._strict_tago_response else _response_body(payload)
         header = _response_header(payload)
         _raise_for_error(header, payload)
-        raw_items = _body_items(body, item_keys=self._body_item_keys)
+        raw_items = (
+            _tago_items(body) if self._strict_tago_response
+            else _body_items(body, item_keys=self._body_item_keys)
+        )
+        if self._strict_tago_response and "totalCount" not in body:
+            raise ResponseParseError("TAGO paged response requires totalCount")
         items = [self._adapter.validate_python({**raw, "raw": dict(raw)}) for raw in raw_items]
         return OpenApiPage[T](
             total_count=pagination.optional_int_value(
@@ -329,6 +336,53 @@ def _raise_for_error(header: Mapping[str, Any], payload: Mapping[str, Any]) -> N
     raise ApiErrorResponse(code=str(code), message=message, payload=dict(payload))
 
 
+def _tago_body(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    header = _response_header(payload)
+    code = pagination.optional_str(pagination.first(header, "resultCode", "returnReasonCode"))
+    if not code:
+        raise ResponseParseError("TAGO response requires an explicit result code")
+    _raise_for_error(header, payload)
+    response = payload.get("response")
+    body = response.get("body") if isinstance(response, Mapping) else None
+    if code == "03":
+        if isinstance(body, Mapping):
+            no_data = {"items": "", **body}
+            if _tago_items(no_data) or int(no_data.get("totalCount", 0)) != 0:
+                raise ResponseParseError("TAGO no-data response contradicts its body")
+        return {"items": "", "totalCount": 0}
+    if not isinstance(body, Mapping):
+        raise ResponseParseError("TAGO success response requires a body")
+    return body
+
+
+def _tago_items(body: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    if "items" not in body:
+        raise ResponseParseError("TAGO success body requires items")
+    raw = body["items"]
+    if isinstance(raw, Mapping) and raw:
+        if "item" not in raw:
+            raise ResponseParseError("TAGO items wrapper requires item")
+        raw = raw["item"]
+    if raw is None or raw == "" or raw == {}:
+        rows: list[Mapping[str, Any]] = []
+    elif isinstance(raw, Mapping):
+        rows = [raw]
+    elif isinstance(raw, list) and all(isinstance(row, Mapping) and row for row in raw):
+        rows = raw
+    else:
+        raise ResponseParseError("TAGO items must contain only non-empty objects")
+    if "totalCount" in body:
+        count = body["totalCount"]
+        if (
+            isinstance(count, bool) or not isinstance(count, (int, str))
+            or not re.fullmatch(r"[0-9]{1,18}", str(count))
+        ):
+            raise ResponseParseError("TAGO totalCount must be a non-negative integer")
+        if int(count) < len(rows):
+            raise ResponseParseError("TAGO totalCount contradicts its items")
+    return rows
+
+
 def _with_damcode(
     page: OpenApiPage[KwaterSluiceRecord],
     damcode: str,
@@ -357,6 +411,7 @@ class _TagoBusService:
             transport=transport,
             endpoint=terminal_endpoint,
             model_type=TagoBusTerminal,
+            strict_tago_response=True,
         )
         self._transport = transport
         self._city_endpoint = city_endpoint
@@ -369,6 +424,7 @@ class _TagoBusService:
             transport=transport,
             endpoint=timetable_endpoint,
             model_type=TagoBusTimetable,
+            strict_tago_response=True,
         )
 
     async def terminal_list(
@@ -480,7 +536,7 @@ class TagoIntercityBusService(_TagoBusService):
 
 def _tago_date(value: date | str) -> tuple[date, str]:
     if isinstance(value, date):
-        return value, value.strftime("%Y%m%d")
+        return value, f"{value.year:04d}{value.month:02d}{value.day:02d}"
     if re.fullmatch(r"[0-9]{8}", value):
         try:
             parsed = date.fromisoformat(f"{value[:4]}-{value[4:6]}-{value[6:]}")
@@ -494,8 +550,10 @@ async def _tago_reference_list(
     transport: AsyncTransport, endpoint: str, adapter: TypeAdapter[T]
 ) -> OpenApiPage[T]:
     payload = pagination.parse_response(await transport.get(endpoint, params={"_type": "json"}))
-    _raise_for_error(_response_header(payload), payload)
-    raw_items = _body_items(_response_body(payload), item_keys=("item", "items", "row", "data"))
+    body = _tago_body(payload)
+    raw_items = _tago_items(body)
+    if "totalCount" in body and int(body["totalCount"]) != len(raw_items):
+        raise ResponseParseError("TAGO unpaged response totalCount contradicts its items")
     items = [adapter.validate_python({**raw, "raw": dict(raw)}) for raw in raw_items]
     return OpenApiPage[T](total_count=len(items), page_no=1, num_of_rows=len(items), items=items)
 
@@ -507,9 +565,11 @@ class TagoTrainService:
         self._transport = transport
         self.stations = DataGoKrOpenApiService[TagoTrainStation](
             transport=transport, endpoint=TRAIN_STATION_ENDPOINT, model_type=TagoTrainStation,
+            strict_tago_response=True,
         )
         self.timetables = DataGoKrOpenApiService[TagoTrainTimetable](
             transport=transport, endpoint=TRAIN_TIMETABLE_ENDPOINT, model_type=TagoTrainTimetable,
+            strict_tago_response=True,
         )
 
     async def city_list(self) -> OpenApiPage[TagoTrainCity]:

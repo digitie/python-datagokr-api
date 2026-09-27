@@ -110,6 +110,11 @@ async with DataGoKrClient(max_rps=1) as client:
 조건은 사용자의 승인 내역을 따른다. 초당 제한과 일일 할당량은 별개다. 공용 클라이언트의
 TPS를 사용하고 `iter_stations`에는 `max_pages`를 지정한다.
 
+TAGO 열차·버스는 명시적인 결과 코드와 응답 구조를 검사한다. 정상 빈 `item`은 빈 목록,
+결과 코드 누락·잘못된 행 타입·모순된 총건수는 `datagokr.exceptions.ResponseParseError`로
+구분한다. 403·인증 오류를 운행편 없음으로 처리하지 않는다. 잘못된 음수·bool 운임은
+모델 검증 오류이며 정상 0원은 그대로 보존한다.
+
 ## 비동기 전환과 TPS 설정
 
 모든 API 조회, `debug_fetch()`, 파일 저장은 `await`로 호출한다. 페이지와 항목은

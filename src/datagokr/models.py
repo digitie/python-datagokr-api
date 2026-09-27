@@ -326,4 +326,11 @@ class TagoTrainTimetable(StandardItem):
     arr_place_name: str | None = Field(default=None, alias="arrplacename")
     dep_planned_time: str | None = Field(default=None, alias="depplandtime")
     arr_planned_time: str | None = Field(default=None, alias="arrplandtime")
-    adult_charge: int | None = Field(default=None, alias="adultcharge")
+    adult_charge: int | None = Field(default=None, alias="adultcharge", ge=0)
+
+    @field_validator("adult_charge", mode="before")
+    @classmethod
+    def reject_boolean_fare(cls, value: Any) -> Any:
+        if isinstance(value, bool):
+            raise ValueError("adultcharge must be a non-negative amount, not a boolean")
+        return value
