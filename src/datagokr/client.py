@@ -17,6 +17,7 @@ from datagokr.services import (
     SpecialStreetService,
     TagoExpressBusService,
     TagoIntercityBusService,
+    TagoTrainService,
     TouristAttractionService,
 )
 from datagokr.services.file_data import FileDataService
@@ -52,6 +53,7 @@ class DataGoKrClient:
         self.kwater_sluice = KwaterSluiceService(transport=self._transport)
         self.express_bus = TagoExpressBusService(transport=self._transport)
         self.intercity_bus = TagoIntercityBusService(transport=self._transport)
+        self.train = TagoTrainService(transport=self._transport)
         self.closed = False
 
     async def save_to_local(self, file_path: str, content: bytes) -> None:

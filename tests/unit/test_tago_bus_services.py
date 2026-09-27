@@ -33,14 +33,14 @@ class FakeTransport:
         pass
 
 
-def _response(items: list[dict[str, Any]]) -> bytes:
+def _response(items: list[dict[str, Any]], *, num_of_rows: int = 10) -> bytes:
     return json.dumps(
         {
             "response": {
                 "header": {"resultCode": "00", "resultMsg": "NORMAL SERVICE"},
                 "body": {
                     "pageNo": 1,
-                    "numOfRows": 10,
+                    "numOfRows": num_of_rows,
                     "totalCount": len(items),
                     "items": {"item": items},
                 },
@@ -123,7 +123,7 @@ async def test_express_bus_timetable_serializes_typed_date_and_response() -> Non
 async def test_intercity_bus_uses_its_own_tago_endpoints() -> None:
     transport = FakeTransport(
         _response([{"terminalId": "123", "terminalNm": "강릉"}]),
-        _response([]),
+        _response([], num_of_rows=20),
     )
     service = TagoIntercityBusService(transport=transport)
     service_date = date(2026, 9, 25)
@@ -185,14 +185,14 @@ async def test_intercity_bus_rejects_non_today_before_provider_call() -> None:
 
 async def test_tago_terminal_iterator_uses_paged_endpoint() -> None:
     transport = FakeTransport(
-        _response([{"terminalId": "A", "terminalNm": "가"}]),
-        _response([]),
+        _response([{"terminalId": "A", "terminalNm": "가"}], num_of_rows=1),
     )
     service = TagoExpressBusService(transport=transport)
 
     terminals = [item async for item in service.iter_terminals(num_of_rows=1)]
 
     assert [item.terminal_id for item in terminals] == ["A"]
+    assert len(transport.calls) == 1
     assert transport.calls[0] == (
         EXPRESS_BUS_TERMINAL_ENDPOINT,
         {"pageNo": 1, "numOfRows": 1, "_type": "json"},

@@ -8,7 +8,7 @@
 (data.go.kr) 표준데이터 Open API, 파일데이터 자동변환 API, 개별 OpenAPI 일부를 감싸는 작은
 typed Python client 라이브러리입니다. `DataGoKrClient`는 async 전용 인터페이스로 서비스별
 속성(`museum_art`, `parking`, `tourist_attraction`, `festival`, `special_street`,
-`file_data`, `agri_weather`, `kwater_sluice`, `express_bus`, `intercity_bus`)을 제공하며, 모든 응답을 Pydantic v2 모델로
+`file_data`, `agri_weather`, `kwater_sluice`, `express_bus`, `intercity_bus`, `train`)을 제공하며, 모든 응답을 Pydantic v2 모델로
 typed 변환합니다.
 
 최근 변경 사항은 [`CHANGELOG.md`](CHANGELOG.md)의 `[Unreleased]`를 참고합니다.
@@ -21,6 +21,7 @@ typed 변환합니다.
 | 파일데이터 자동변환 4종 | `client.file_data` | 서울 책방, 경기 무슬림 친화 음식점, 안산 세계맛집, 제주 향토음식점 raw row 보존 조회 |
 | 개별 OpenAPI 2종 | `client.agri_weather` / `client.kwater_sluice` | 농업기상 관측지점 상세정보, 한국수자원공사 수문 운영 정보 |
 | TAGO 버스 2종 | `client.express_bus` / `client.intercity_bus` | 고속·시외버스 터미널·도시·등급 및 출발/도착지 기준 운행정보 |
+| TAGO 열차 | `client.train` | 도시·차량종류·도시별 철도역 및 출발/도착 역 기준 예정 운행편 |
 | 파일 저장 helper | `client.save_to_local()` / `client.save_to_rustfs()` | 다운로드한 바이트를 로컬/RustFS 객체 저장소에 저장 |
 
 ## 먼저 읽을 문서
@@ -78,6 +79,41 @@ async with DataGoKrClient(max_rps=5) as client:
 인증키는 `DataGoKrClient(api_key="...")`로 직접 넘기거나 `DATA_GO_KR_SERVICE_KEY`
 환경변수에 설정합니다. data.go.kr 엔드포인트 서비스키 환경변수는 형제 저장소와
 이 이름으로 통일합니다(`docs/decisions.md` D-002). `.env`는 저장소에 포함하지 않습니다.
+
+### 일반철도 예정 운행정보
+
+[국토교통부 TAGO 열차정보 15098552](https://www.data.go.kr/data/15098552/openapi.do)의
+네 오퍼레이션을 `client.train.city_list()`, `class_list()`,
+`station_list(city_code="11")`, `timetable_list()`로 제공한다. 도시·차량종류는 한 번,
+역 목록은 `iter_stations(city_code="11", max_pages=...)`로 제한해 조회할 수 있다.
+
+```python
+async with DataGoKrClient(max_rps=1) as client:
+    page = await client.train.timetable_list(
+        departure_station_id="NAT010000",
+        arrival_station_id="NAT014445",
+        departure_date="20260927",
+        train_grade_code="00",
+    )
+    for trip in page.items:
+        print(trip.train_number, trip.dep_planned_time, trip.arr_planned_time)
+```
+
+날짜 없는 시각으로 축약하지 않고 다음날 도착도 원문 날짜와 함께 보존한다. 역 목록에는
+좌표가 없고 시간표에는 실시간 지연·잔여 좌석이 없다. 버스와 동일한 인증키를 사용해도
+열차 서비스 활용신청 권한은 별도다. 2026-09-27 배포 환경의 한 차례 진단은 HTTP 403으로
+실패했으며 원인을 권한 미승인으로 단정하지 않는다. 실제 승인 확인 전 반복 호출하지 않는다.
+따라서 현재 검증은 공식 명세 기반 오프라인 계약 테스트이며 live 성공을 주장하지 않는다.
+
+도시/역/차량종류를 캐시하고 시간표는 필요한 출발·도착 역과 날짜에 한해 조회한다.
+공식 포털의 개발계정 트래픽 표시는 2026-09-27 확인 시 10,000건이며, 실제 할당량·운영계정
+조건은 사용자의 승인 내역을 따른다. 초당 제한과 일일 할당량은 별개다. 공용 클라이언트의
+TPS를 사용하고 `iter_stations`에는 `max_pages`를 지정한다.
+
+TAGO 열차·버스는 명시적인 결과 코드와 응답 구조를 검사한다. 정상 빈 `item`은 빈 목록,
+결과 코드 누락·잘못된 행 타입·모순된 총건수는 `datagokr.exceptions.ResponseParseError`로
+구분한다. 403·인증 오류를 운행편 없음으로 처리하지 않는다. 잘못된 음수·bool 운임은
+모델 검증 오류이며 정상 0원은 그대로 보존한다.
 
 ## 비동기 전환과 TPS 설정
 
