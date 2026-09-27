@@ -126,6 +126,18 @@ class DataGoKrOpenApiService(Generic[T]):
         )
         if self._strict_tago_response and "totalCount" not in body:
             raise ResponseParseError("TAGO paged response requires totalCount")
+        if self._strict_tago_response:
+            for field, expected in (("pageNo", page_no), ("numOfRows", resolved_num_of_rows)):
+                value = body.get(field, expected)
+                if (
+                    isinstance(value, bool) or not isinstance(value, (int, str))
+                    or not re.fullmatch(r"[0-9]{1,18}", str(value))
+                    or int(value) != expected
+                ):
+                    raise ResponseParseError("TAGO pagination does not match the requested page")
+            remaining = max(0, int(body["totalCount"]) - (page_no - 1) * resolved_num_of_rows)
+            if len(raw_items) != min(resolved_num_of_rows, remaining):
+                raise ResponseParseError("TAGO page contradicts its remaining totalCount")
         items = [self._adapter.validate_python({**raw, "raw": dict(raw)}) for raw in raw_items]
         return OpenApiPage[T](
             total_count=pagination.optional_int_value(
@@ -345,6 +357,8 @@ def _tago_body(payload: Mapping[str, Any]) -> Mapping[str, Any]:
     response = payload.get("response")
     body = response.get("body") if isinstance(response, Mapping) else None
     if code == "03":
+        if not isinstance(body, Mapping) and body not in (None, "", []):
+            raise ResponseParseError("TAGO no-data response has an invalid body")
         if isinstance(body, Mapping):
             no_data = {"items": "", **body}
             if _tago_items(no_data) or int(no_data.get("totalCount", 0)) != 0:

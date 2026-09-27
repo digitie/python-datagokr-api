@@ -251,3 +251,48 @@ async def test_date_objects_are_always_eight_ascii_digits(year: int, expected: s
         departure_station_id="A", arrival_station_id="B", departure_date=date(year, 1, 1),
     )
     assert (transport.calls[0][1] or {})["depPlandTime"] == expected
+
+
+@pytest.mark.parametrize("body", [[{"trainno": "123"}], "broken", 7, True])
+@pytest.mark.parametrize("method", ["city", "class", "station", "timetable"])
+async def test_no_data_code_rejects_nonempty_invalid_body(method: str, body: object) -> None:
+    raw = {"response": {"header": {"resultCode": "03"}, "body": body}}
+    service = TagoTrainService(transport=FakeTransport(json.dumps(raw).encode()))
+    with pytest.raises(ResponseParseError):
+        await call_service(service, method)
+
+
+async def test_iterator_rejects_empty_page_before_declared_total() -> None:
+    transport = FakeTransport(payload([], totalCount=3, pageNo=1, numOfRows=10))
+    with pytest.raises(ResponseParseError, match="remaining"):
+        _ = [row async for row in TagoTrainService(transport=transport).iter_stations(
+            city_code="11", num_of_rows=10, max_pages=3,
+        )]
+    assert len(transport.calls) == 1
+
+
+async def test_empty_page_beyond_declared_total_is_valid() -> None:
+    service = TagoTrainService(transport=FakeTransport(
+        payload([], totalCount=3, pageNo=2, numOfRows=10),
+    ))
+    page = await service.station_list(city_code="11", page_no=2, num_of_rows=10)
+    assert page.items == []
+    assert page.total_count == 3
+
+
+async def test_short_page_before_declared_total_is_not_complete() -> None:
+    service = TagoTrainService(transport=FakeTransport(payload(
+        [{"nodeid": "A", "nodename": "서울"}], totalCount=3, pageNo=1, numOfRows=10,
+    )))
+    with pytest.raises(ResponseParseError, match="remaining"):
+        await service.station_list(city_code="11")
+
+
+@pytest.mark.parametrize("metadata", [
+    {"pageNo": 3}, {"pageNo": True}, {"pageNo": "bad"}, {"numOfRows": -1},
+    {"numOfRows": 1.5},
+])
+async def test_invalid_page_metadata_cannot_hide_empty_page(metadata: dict[str, object]) -> None:
+    service = TagoTrainService(transport=FakeTransport(payload([], totalCount=3, **metadata)))
+    with pytest.raises(ResponseParseError):
+        await service.station_list(city_code="11")
