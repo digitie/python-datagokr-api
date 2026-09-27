@@ -9,6 +9,9 @@
 
 ### Added
 
+- `DataGoKrClient.train`에 TAGO 열차정보(15098552)의 도시·차량종류·역·예정 운행편
+  비동기 조회를 추가한다. 실제 승인 확인은 별도이며 오프라인 계약 테스트로 검증한다.
+
 - `DataGoKrClient.express_bus`와 `DataGoKrClient.intercity_bus`에 TAGO 터미널·도시·등급
   목록과 출발/도착 터미널 기준 운행정보 typed async 조회를 추가한다.
 

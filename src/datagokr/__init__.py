@@ -33,6 +33,10 @@ from datagokr.models import (
     TagoBusClass,
     TagoBusTerminal,
     TagoBusTimetable,
+    TagoTrainCity,
+    TagoTrainClass,
+    TagoTrainStation,
+    TagoTrainTimetable,
 )
 from datagokr.services import (
     AGRI_WEATHER_STATION_ENDPOINT,
@@ -63,6 +67,7 @@ from datagokr.services import (
     SpecialStreetService,
     TagoExpressBusService,
     TagoIntercityBusService,
+    TagoTrainService,
     TouristAttractionService,
     get_file_dataset,
 )
@@ -123,6 +128,11 @@ __all__ = [
     "TagoBusTimetable",
     "TagoExpressBusService",
     "TagoIntercityBusService",
+    "TagoTrainCity",
+    "TagoTrainClass",
+    "TagoTrainService",
+    "TagoTrainStation",
+    "TagoTrainTimetable",
     "TouristAttractionService",
     "__version__",
     "debug_error",

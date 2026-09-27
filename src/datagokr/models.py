@@ -295,3 +295,35 @@ class TagoBusTimetable(StandardItem):
         if value is None:
             return None
         return str(value)
+
+
+class TagoTrainStation(StandardItem):
+    """TAGO 도시별 일반철도 역. 좌표는 이 API에서 제공하지 않는다."""
+
+    station_id: str | None = Field(default=None, alias="nodeid")
+    station_name: str | None = Field(default=None, alias="nodename")
+
+
+class TagoTrainCity(StandardItem):
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+    city_code: str | None = Field(default=None, alias="citycode")
+    city_name: str | None = Field(default=None, alias="cityname")
+
+
+class TagoTrainClass(StandardItem):
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+    grade_id: str | None = Field(default=None, alias="vehiclekndid")
+    grade_name: str | None = Field(default=None, alias="vehiclekndnm")
+
+
+class TagoTrainTimetable(StandardItem):
+    """일반철도 예정 운행편. 지연·실시간 도착 또는 잔여 좌석이 아니다."""
+
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+    train_number: str | None = Field(default=None, alias="trainno")
+    grade_name: str | None = Field(default=None, alias="traingradename")
+    dep_place_name: str | None = Field(default=None, alias="depplacename")
+    arr_place_name: str | None = Field(default=None, alias="arrplacename")
+    dep_planned_time: str | None = Field(default=None, alias="depplandtime")
+    arr_planned_time: str | None = Field(default=None, alias="arrplandtime")
+    adult_charge: int | None = Field(default=None, alias="adultcharge")

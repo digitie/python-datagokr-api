@@ -19,6 +19,10 @@ from datagokr.models import (
     TagoBusClass,
     TagoBusTerminal,
     TagoBusTimetable,
+    TagoTrainCity,
+    TagoTrainClass,
+    TagoTrainStation,
+    TagoTrainTimetable,
 )
 from datagokr.services import pagination
 from datagokr.transport import AsyncTransport
@@ -41,6 +45,10 @@ INTERCITY_BUS_TERMINAL_ENDPOINT = "https://apis.data.go.kr/1613000/SuburbsBusInf
 INTERCITY_BUS_CITY_ENDPOINT = "https://apis.data.go.kr/1613000/SuburbsBusInfo/GetCtyCodeList"
 INTERCITY_BUS_CLASS_ENDPOINT = "https://apis.data.go.kr/1613000/SuburbsBusInfo/GetSuberbsBusGradList"
 INTERCITY_BUS_TIMETABLE_ENDPOINT = "https://apis.data.go.kr/1613000/SuburbsBusInfo/GetStrtpntAlocFndSuberbsBusInfo"
+TRAIN_STATION_ENDPOINT = "https://apis.data.go.kr/1613000/TrainInfo/GetCtyAcctoTrainSttnList"
+TRAIN_CITY_ENDPOINT = "https://apis.data.go.kr/1613000/TrainInfo/GetCtyCodeList"
+TRAIN_CLASS_ENDPOINT = "https://apis.data.go.kr/1613000/TrainInfo/GetVhcleKndList"
+TRAIN_TIMETABLE_ENDPOINT = "https://apis.data.go.kr/1613000/TrainInfo/GetStrtpntAlocFndTrainInfo"
 
 T = TypeVar("T", bound=StandardItem)
 
@@ -429,17 +437,7 @@ class _TagoBusService:
     async def _unpaged_reference_list(
         self, endpoint: str, adapter: TypeAdapter[T]
     ) -> OpenApiPage[T]:
-        content = await self._transport.get(endpoint, params={"_type": "json"})
-        payload = pagination.parse_response(content)
-        header = _response_header(payload)
-        _raise_for_error(header, payload)
-        raw_items = _body_items(
-            _response_body(payload), item_keys=("item", "items", "row", "data")
-        )
-        items = [adapter.validate_python({**raw, "raw": dict(raw)}) for raw in raw_items]
-        return OpenApiPage[T](
-            total_count=len(items), page_no=1, num_of_rows=len(items), items=items
-        )
+        return await _tago_reference_list(self._transport, endpoint, adapter)
 
     def _validate_service_date(self, service_date: date) -> None:
         return None
@@ -490,3 +488,70 @@ def _tago_date(value: date | str) -> tuple[date, str]:
             raise ValueError("departure_date must be a valid calendar date") from exc
         return parsed, value
     raise ValueError("departure_date must be a date or YYYYMMDD string")
+
+
+async def _tago_reference_list(
+    transport: AsyncTransport, endpoint: str, adapter: TypeAdapter[T]
+) -> OpenApiPage[T]:
+    payload = pagination.parse_response(await transport.get(endpoint, params={"_type": "json"}))
+    _raise_for_error(_response_header(payload), payload)
+    raw_items = _body_items(_response_body(payload), item_keys=("item", "items", "row", "data"))
+    items = [adapter.validate_python({**raw, "raw": dict(raw)}) for raw in raw_items]
+    return OpenApiPage[T](total_count=len(items), page_no=1, num_of_rows=len(items), items=items)
+
+
+class TagoTrainService:
+    """국토교통부 TAGO 열차정보(15098552). 별도 활용신청 권한이 필요하다."""
+
+    def __init__(self, *, transport: AsyncTransport) -> None:
+        self._transport = transport
+        self.stations = DataGoKrOpenApiService[TagoTrainStation](
+            transport=transport, endpoint=TRAIN_STATION_ENDPOINT, model_type=TagoTrainStation,
+        )
+        self.timetables = DataGoKrOpenApiService[TagoTrainTimetable](
+            transport=transport, endpoint=TRAIN_TIMETABLE_ENDPOINT, model_type=TagoTrainTimetable,
+        )
+
+    async def city_list(self) -> OpenApiPage[TagoTrainCity]:
+        return await _tago_reference_list(
+            self._transport, TRAIN_CITY_ENDPOINT, TypeAdapter(TagoTrainCity),
+        )
+
+    async def class_list(self) -> OpenApiPage[TagoTrainClass]:
+        return await _tago_reference_list(
+            self._transport, TRAIN_CLASS_ENDPOINT, TypeAdapter(TagoTrainClass),
+        )
+
+    async def station_list(
+        self, *, city_code: str, page_no: int = 1, num_of_rows: int = 10,
+    ) -> OpenApiPage[TagoTrainStation]:
+        if not city_code.strip():
+            raise ValueError("city_code is required")
+        return await self.stations.list(
+            cityCode=city_code, page_no=page_no, num_of_rows=num_of_rows,
+        )
+
+    def iter_stations(
+        self, *, city_code: str, num_of_rows: int | None = None, max_pages: int | None = None,
+    ) -> AsyncIterator[TagoTrainStation]:
+        if not city_code.strip():
+            raise ValueError("city_code is required")
+        return self.stations.iter_all(
+            cityCode=city_code, num_of_rows=num_of_rows, max_pages=max_pages,
+        )
+
+    async def timetable_list(
+        self, *, departure_station_id: str, arrival_station_id: str,
+        departure_date: date | str, train_grade_code: str | None = None,
+        page_no: int = 1, num_of_rows: int = 10,
+    ) -> OpenApiPage[TagoTrainTimetable]:
+        if not departure_station_id.strip() or not arrival_station_id.strip():
+            raise ValueError("departure_station_id and arrival_station_id are required")
+        if isinstance(departure_date, datetime):
+            raise ValueError("departure_date must be a date without a time")
+        _, serialized_date = _tago_date(departure_date)
+        return await self.timetables.list(
+            depPlaceId=departure_station_id, arrPlaceId=arrival_station_id,
+            depPlandTime=serialized_date, trainGradeCode=train_grade_code,
+            page_no=page_no, num_of_rows=num_of_rows,
+        )
