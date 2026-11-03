@@ -120,11 +120,26 @@ class MuseumArtGalleryService(StandardOpenApiService[PublicMuseumArtGallery]):
 
 
 class ParkingLotService(StandardOpenApiService[PublicParkingLot]):
-    def __init__(self, *, transport: AsyncTransport) -> None:
+    def __init__(
+        self, *, transport: AsyncTransport, public_transport: AsyncTransport | None = None,
+    ) -> None:
+        self._public_transport = public_transport
         super().__init__(
             transport=transport,
             endpoint=PARKING_LOT_ENDPOINT,
             model_type=PublicParkingLot,
+        )
+
+    def iter_file_pages(
+        self, *, num_of_rows: int = 10_000, max_pages: int | None = None,
+    ) -> AsyncIterator[StandardPage[PublicParkingLot]]:
+        """포털의 공개 파일 다운로드와 같은 경로. 활용신청·서비스키가 필요 없다."""
+        from datagokr.services.parking_file import iter_parking_file_pages
+
+        if self._public_transport is None:
+            raise RuntimeError("public file transport is required; use DataGoKrClient")
+        return iter_parking_file_pages(
+            self._public_transport, num_of_rows=num_of_rows, max_pages=max_pages,
         )
 
 
