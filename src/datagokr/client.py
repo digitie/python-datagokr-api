@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import replace
 from types import TracebackType
 from typing import Any
 
@@ -43,8 +44,14 @@ class DataGoKrClient:
             max_rps=max_rps,
         )
         self._transport = AsyncHttpxTransport(self.config, rate_limiter=rate_limiter)
+        # 공개 파일 다운로드에는 설정된 서비스키도 보내지 않는다. TPS 예산은 공유한다.
+        self._public_transport = AsyncHttpxTransport(
+            replace(self.config, api_key=None), rate_limiter=self._transport.rate_limiter,
+        )
         self.museum_art = MuseumArtGalleryService(transport=self._transport)
-        self.parking = ParkingLotService(transport=self._transport)
+        self.parking = ParkingLotService(
+            transport=self._transport, public_transport=self._public_transport,
+        )
         self.tourist_attraction = TouristAttractionService(transport=self._transport)
         self.festival = CulturalFestivalService(transport=self._transport)
         self.special_street = SpecialStreetService(transport=self._transport)
@@ -184,6 +191,7 @@ class DataGoKrClient:
 
     async def aclose(self) -> None:
         await self._transport.aclose()
+        await self._public_transport.aclose()
         self.closed = True
 
 

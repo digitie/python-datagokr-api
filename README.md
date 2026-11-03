@@ -80,6 +80,24 @@ async with DataGoKrClient(max_rps=5) as client:
 환경변수에 설정합니다. data.go.kr 엔드포인트 서비스키 환경변수는 형제 저장소와
 이 이름으로 통일합니다(`docs/decisions.md` D-002). `.env`는 저장소에 포함하지 않습니다.
 
+### 키 없는 전국주차장 파일 다운로드
+
+[전국주차장정보표준데이터](https://www.data.go.kr/data/15012896/standard.do)의 CSV/JSON
+다운로드는 OpenAPI와 달리 서비스키·활용신청이 필요하지 않습니다. 포털 다운로드 화면과
+같은 공개 다운로드 경로를 사용하고, 대문자 원문 컬럼을 기존 `PublicParkingLot`으로 변환합니다.
+
+```python
+async with DataGoKrClient() as client:
+    async for page in client.parking.iter_file_pages():
+        for parking in page.items:
+            print(parking.prkplce_nm)
+```
+
+설정에 키가 있어도 이 경로에는 전송하지 않습니다. 전체 건수와 각 페이지 길이, 다운로드
+전후 메타데이터를 검산하며 포털의 5만 건 상한에 도달한 집합은 거부합니다. 중간 페이지나
+마지막 메타데이터 검산에서 실패할 수 있으므로 소비자는 순회를 끝낸 뒤 원자 게시해야 합니다.
+기존 `parking.list()`·`parking.iter_pages()` OpenAPI 경로는 계속 서비스키를 사용합니다.
+
 ### 일반철도 예정 운행정보
 
 [국토교통부 TAGO 열차정보 15098552](https://www.data.go.kr/data/15098552/openapi.do)의
