@@ -28,6 +28,10 @@ class TransportError(DataGoKrError):
         self.status_code = status_code
 
 
+class ResponseParseError(DataGoKrError):
+    """정상 성공 여부나 항목 구조를 확인할 수 없는 제공기관 응답."""
+
+
 @dataclass
 class ApiErrorResponse(DataGoKrError):
     """Raised when data.go.kr returns an explicit non-normal result code."""

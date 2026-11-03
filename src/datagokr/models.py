@@ -252,3 +252,85 @@ class KwaterSluiceRecord(StandardItem):
     rsvwtqy: float | None = None
     rsvwtrt: float | None = None
     damcode: str | None = None
+
+
+class TagoBusTerminal(StandardItem):
+    """TAGO 고속·시외버스 터미널 목록 항목."""
+
+    terminal_id: str | None = Field(default=None, alias="terminalId")
+    terminal_name: str | None = Field(default=None, alias="terminalNm")
+    city_name: str | None = Field(default=None, alias="cityName")
+
+
+class TagoBusCity(StandardItem):
+    """TAGO 고속·시외버스 도시 코드 항목."""
+
+    city_code: str | None = Field(default=None, alias="cityCode")
+    city_name: str | None = Field(default=None, alias="cityName")
+
+
+class TagoBusClass(StandardItem):
+    """TAGO 고속·시외버스 등급 항목."""
+
+    grade_id: str | None = Field(default=None, alias="gradeId")
+    grade_name: str | None = Field(default=None, alias="gradeNm")
+
+
+class TagoBusTimetable(StandardItem):
+    """TAGO 출발·도착 터미널 기준 버스 배차 항목."""
+
+    route_id: str | None = Field(default=None, alias="routeId")
+    dep_place_name: str | None = Field(default=None, alias="depPlaceNm")
+    arr_place_name: str | None = Field(default=None, alias="arrPlaceNm")
+    dep_planned_time: str | None = Field(default=None, alias="depPlandTime")
+    arr_planned_time: str | None = Field(default=None, alias="arrPlandTime")
+    grade_name: str | None = Field(default=None, alias="gradeNm")
+    adult_charge: int | None = Field(default=None, alias="charge")
+
+    @field_validator("dep_planned_time", "arr_planned_time", mode="before")
+    @classmethod
+    def normalize_planned_time(cls, value: object) -> str | None:
+        """TAGO가 숫자로도 반환하는 운행 시각을 문자열로 통일한다."""
+
+        if value is None:
+            return None
+        return str(value)
+
+
+class TagoTrainStation(StandardItem):
+    """TAGO 도시별 일반철도 역. 좌표는 이 API에서 제공하지 않는다."""
+
+    station_id: str | None = Field(default=None, alias="nodeid")
+    station_name: str | None = Field(default=None, alias="nodename")
+
+
+class TagoTrainCity(StandardItem):
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+    city_code: str | None = Field(default=None, alias="citycode")
+    city_name: str | None = Field(default=None, alias="cityname")
+
+
+class TagoTrainClass(StandardItem):
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+    grade_id: str | None = Field(default=None, alias="vehiclekndid")
+    grade_name: str | None = Field(default=None, alias="vehiclekndnm")
+
+
+class TagoTrainTimetable(StandardItem):
+    """일반철도 예정 운행편. 지연·실시간 도착 또는 잔여 좌석이 아니다."""
+
+    model_config = ConfigDict(coerce_numbers_to_str=True)
+    train_number: str | None = Field(default=None, alias="trainno")
+    grade_name: str | None = Field(default=None, alias="traingradename")
+    dep_place_name: str | None = Field(default=None, alias="depplacename")
+    arr_place_name: str | None = Field(default=None, alias="arrplacename")
+    dep_planned_time: str | None = Field(default=None, alias="depplandtime")
+    arr_planned_time: str | None = Field(default=None, alias="arrplandtime")
+    adult_charge: int | None = Field(default=None, alias="adultcharge", ge=0)
+
+    @field_validator("adult_charge", mode="before")
+    @classmethod
+    def reject_boolean_fare(cls, value: Any) -> Any:
+        if isinstance(value, bool):
+            raise ValueError("adultcharge must be a non-negative amount, not a boolean")
+        return value
