@@ -7,6 +7,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- 공공주차장 응답의 `insttCode`·`insttNm`을 기관 코드·기관명 필드로 파싱해 기관별 주차장 식별자를 보존한다. 기존 `instt_code`·`instt_nm` 입력도 계속 지원한다.
+
 ### Added
 
 - `DataGoKrClient.train`에 TAGO 열차정보(15098552)의 도시·차량종류·역·예정 운행편
