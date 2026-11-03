@@ -7,6 +7,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- 공공주차장 응답의 `insttCode`·`insttNm`을 기관 코드·기관명 필드로 파싱해 기관별 주차장 식별자를 보존한다. 기존 `instt_code`·`instt_nm` 입력도 계속 지원한다.
+
 ### Changed
 - DataGoKrClient의 모든 조회·debug·저장을 async로 전환하고 페이지 순회를 async for로 제공한다.
 - close()/동기 context manager를 aclose()/async with로 교체한다.
