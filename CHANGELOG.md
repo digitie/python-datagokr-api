@@ -9,6 +9,11 @@
 
 ### Added
 
+- `DataGoKrClient.traditional_market`에 전국전통시장표준데이터(15012894,
+  `tn_pubr_public_trdit_mrkt_api`) 조회와 `PublicTraditionalMarket` 모델을 추가한다.
+  점포수·개설연도·좌표의 비숫자 표기는 행을 버리지 않고 None으로 두며 원문은 raw에 남는다.
+  이 API는 서비스키마다 따로 활용신청해야 한다.
+
 - `DataGoKrClient.train`에 TAGO 열차정보(15098552)의 도시·차량종류·역·예정 운행편
   비동기 조회를 추가한다. 실제 승인 확인은 별도이며 오프라인 계약 테스트로 검증한다.
 

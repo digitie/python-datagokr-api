@@ -36,12 +36,14 @@ from datagokr.services.standard import (
     PARKING_LOT_ENDPOINT,
     SPECIAL_STREET_ENDPOINT,
     TOURIST_ATTRACTION_ENDPOINT,
+    TRADITIONAL_MARKET_ENDPOINT,
     CulturalFestivalService,
     MuseumArtGalleryService,
     ParkingLotService,
     SpecialStreetService,
     StandardOpenApiService,
     TouristAttractionService,
+    TraditionalMarketService,
 )
 
 __all__ = [
@@ -63,6 +65,7 @@ __all__ = [
     "PARKING_LOT_ENDPOINT",
     "SPECIAL_STREET_ENDPOINT",
     "TOURIST_ATTRACTION_ENDPOINT",
+    "TRADITIONAL_MARKET_ENDPOINT",
     "TRAIN_CITY_ENDPOINT",
     "TRAIN_CLASS_ENDPOINT",
     "TRAIN_STATION_ENDPOINT",
@@ -81,5 +84,6 @@ __all__ = [
     "TagoIntercityBusService",
     "TagoTrainService",
     "TouristAttractionService",
+    "TraditionalMarketService",
     "get_file_dataset",
 ]

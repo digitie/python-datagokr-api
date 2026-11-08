@@ -21,6 +21,7 @@ def _api_key() -> str | None:
         ("tourist_attraction", "trrsrt_nm"),
         ("festival", "fstvl_nm"),
         ("special_street", "stret_nm"),
+        ("traditional_market", "mrkt_nm"),
     ],
 )
 async def test_live_standard_endpoint_returns_items(service_name: str, name_attr: str) -> None:
