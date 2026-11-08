@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import math
 import re
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -233,25 +234,47 @@ class PublicTraditionalMarket(StandardItem):
     def _lenient_int(cls, value: Any) -> Any:
         # 점포수·개설연도는 지자체가 직접 입력한 값이다. 비숫자 표기 하나 때문에 행
         # 전체가 검증 실패로 버려지지 않도록 None으로 두고 원문은 raw에 남긴다.
+        if isinstance(value, bool):
+            return None
         if isinstance(value, str):
             text = value.strip()
             return int(text) if _INT_TEXT_RE.fullmatch(text) else None
-        if isinstance(value, bool):
-            return None
+        if isinstance(value, float):
+            return int(value) if math.isfinite(value) and value.is_integer() else None
         return value
 
     @field_validator("latitude", "longitude", mode="before")
     @classmethod
     def _lenient_float(cls, value: Any) -> Any:
-        # 좌표 결측·비숫자 표기는 None — 행은 주소로 살린다(원문은 raw 보존).
+        # 좌표 결측·비숫자·비유한(NaN/inf) 표기는 None — 행은 주소로 살린다(원문은 raw).
         if isinstance(value, bool):
             return None
         if isinstance(value, str):
             try:
-                return float(value.strip())
+                value = float(value.strip())
             except ValueError:
                 return None
+        if isinstance(value, int | float):
+            number = float(value)
+            return number if math.isfinite(number) else None
         return value
+
+    @field_validator("reference_date", mode="before")
+    @classmethod
+    def _lenient_date(cls, value: Any) -> Any:
+        # 데이터기준일자가 ISO 형식이 아니어도 행을 버리지 않는다(원문은 raw).
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        if isinstance(value, str):
+            text = value.strip()
+            for fmt in ("%Y-%m-%d", "%Y%m%d", "%Y.%m.%d", "%Y/%m/%d"):
+                try:
+                    return datetime.strptime(text, fmt).date()
+                except ValueError:
+                    continue
+        return None
 
 
 class PublicCulturalFestival(StandardItem):

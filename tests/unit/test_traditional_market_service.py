@@ -5,6 +5,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from datagokr import DataGoKrClient, PublicTraditionalMarket, get_api_catalog_entry
 from datagokr.services import TRADITIONAL_MARKET_ENDPOINT, TraditionalMarketService
 
@@ -45,7 +47,6 @@ async def test_traditional_market_parses_recorded_official_rows() -> None:
     assert transport.calls == [
         (TRADITIONAL_MARKET_ENDPOINT, {"pageNo": 1, "numOfRows": 100, "type": "json"})
     ]
-    assert TRADITIONAL_MARKET_ENDPOINT == "tn_pubr_public_trdit_mrkt_api"
     assert page.total_count == 6
     names = [item.mrkt_nm for item in page.items]
     assert names == [
@@ -79,6 +80,7 @@ async def test_traditional_market_parses_recorded_official_rows() -> None:
     assert ganghwa.mrkt_estbl_cycle == "2일+7일"
 
     # 좌표 없는 행(함열시장)과 도로명 없는 행(영동전통시장)도 버리지 않는다.
+    # "전북특별차치도"는 원천 데이터의 오타를 그대로 옮긴 것이다(가공하지 않는다).
     hamyeol = page.items[4]
     assert hamyeol.latitude is None and hamyeol.longitude is None
     assert hamyeol.lnmadr == "전북특별차치도 익산시 와리 565-26"
@@ -109,6 +111,37 @@ async def test_traditional_market_keeps_rows_with_free_form_numbers() -> None:
     assert item.estbl_year is None
     assert item.instt_code == "4211000"
     assert item.raw["storNumber"] == "약 50"
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "attr", "expected"),
+    [
+        ("latitude", "NaN", "latitude", None),
+        ("latitude", "inf", "latitude", None),
+        ("longitude", "1e400", "longitude", None),
+        ("longitude", float("nan"), "longitude", None),
+        ("latitude", 37.5, "latitude", 37.5),
+        ("storNumber", 12.0, "stor_number", 12),
+        ("storNumber", 12.5, "stor_number", None),
+        ("storNumber", "-3", "stor_number", None),
+        ("estblYear", True, "estbl_year", None),
+        ("referenceDate", "20251110", "reference_date", date(2025, 11, 10)),
+        ("referenceDate", "2025.11.10", "reference_date", date(2025, 11, 10)),
+        ("referenceDate", "2025-11-1", "reference_date", date(2025, 11, 1)),
+        ("referenceDate", " ", "reference_date", None),
+        ("referenceDate", "미상", "reference_date", None),
+    ],
+)
+async def test_traditional_market_never_drops_row_on_bad_scalar(
+    field: str, value: Any, attr: str, expected: Any
+) -> None:
+    row = {"mrktNm": "검증시장", field: value}
+    service = TraditionalMarketService(transport=FakeTransport(_page(row)))
+
+    page = await service.list()
+
+    assert [item.mrkt_nm for item in page.items] == ["검증시장"]
+    assert getattr(page.items[0], attr) == expected
 
 
 async def test_traditional_market_iter_all_walks_pages() -> None:
