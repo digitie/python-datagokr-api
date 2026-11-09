@@ -1,0 +1,165 @@
+{
+ "traditional_market": {
+  "header": {
+   "totalCount": 1393,
+   "tableVO": {
+    "publicDataPk": "15012894",
+    "svcTableNm": "tn_pubr_public_trdit_mrkt_svc",
+    "colNmList": [
+     "MRKT_NM",
+     "MRKT_TYPE",
+     "RDNMADR",
+     "LNMADR",
+     "MRKT_ESTBL_CYCLE",
+     "LATITUDE",
+     "LONGITUDE",
+     "STOR_NUMBER",
+     "TRTMNT_PRDLST",
+     "USE_GCCT",
+     "HOMEPAGE_URL",
+     "PBLIC_TOILET_YN",
+     "PRKPLCE_YN",
+     "ESTBL_YEAR",
+     "PHONE_NUMBER",
+     "REFERENCE_DATE"
+    ]
+   }
+  },
+  "rows": [
+   {
+    "ESTBL_YEAR": "2006",
+    "REFERENCE_DATE": "2025-11-10",
+    "MRKT_NM": "망원시장",
+    "USE_GCCT": "",
+    "LONGITUDE": "126.9059507",
+    "PRKPLCE_YN": "Y",
+    "MRKT_TYPE": "상설장",
+    "RDNMADR": "서울특별시 마포구 망원로8길 7",
+    "INSTT_NM": "소상공인시장진흥공단",
+    "MRKT_ESTBL_CYCLE": "매일",
+    "TRTMNT_PRDLST": "농산물+축산물+가공식품+가정용품+음식점",
+    "INSTT_CODE": "B553077",
+    "HOMEPAGE_URL": "",
+    "PBLIC_TOILET_YN": "Y",
+    "LNMADR": "서울특별시 마포구 망원동 486-37",
+    "PHONE_NUMBER": "02-335-3591",
+    "LATITUDE": "37.55715742",
+    "STOR_NUMBER": "82"
+   },
+   {
+    "ESTBL_YEAR": "1964",
+    "REFERENCE_DATE": "2025-11-10",
+    "MRKT_NM": "남대문시장",
+    "USE_GCCT": "",
+    "LONGITUDE": "126.9776585",
+    "PRKPLCE_YN": "N",
+    "MRKT_TYPE": "상설장",
+    "RDNMADR": "서울특별시 중구 남대문시장4길 21",
+    "INSTT_NM": "소상공인시장진흥공단",
+    "MRKT_ESTBL_CYCLE": "매일",
+    "TRTMNT_PRDLST": "농산물+축산물+수산물+가공식품+의류+신발+가정용품+음식점+근린생활서비스",
+    "INSTT_CODE": "B553077",
+    "HOMEPAGE_URL": "www.namdaemunmarket.co.kr",
+    "PBLIC_TOILET_YN": "Y",
+    "LNMADR": "서울특별시 중구 남창동 49-1",
+    "PHONE_NUMBER": "02-779-8658",
+    "LATITUDE": "37.55918357",
+    "STOR_NUMBER": "5111"
+   },
+   {
+    "ESTBL_YEAR": "1960",
+    "REFERENCE_DATE": "2025-11-10",
+    "MRKT_NM": "통인시장",
+    "USE_GCCT": "",
+    "LONGITUDE": "126.9699423",
+    "PRKPLCE_YN": "N",
+    "MRKT_TYPE": "상설장",
+    "RDNMADR": "서울특별시 종로구 자하문로 15길 18",
+    "INSTT_NM": "소상공인시장진흥공단",
+    "MRKT_ESTBL_CYCLE": "매일",
+    "TRTMNT_PRDLST": "농산물+축산물+가공식품+음식점",
+    "INSTT_CODE": "B553077",
+    "HOMEPAGE_URL": "",
+    "PBLIC_TOILET_YN": "Y",
+    "LNMADR": "서울특별시 종로구 통인동 10-3",
+    "PHONE_NUMBER": "02-722-0911",
+    "LATITUDE": "37.5807607",
+    "STOR_NUMBER": "74"
+   }
+  ]
+ },
+ "special_street": {
+  "header": {
+   "totalCount": 274,
+   "tableVO": {
+    "publicDataPk": "15017322",
+    "svcTableNm": "tn_pubr_public_area_spcliz_stret_svc",
+    "colNmList": [
+     "STRET_NM",
+     "STRET_INTRCN",
+     "RDNMADR",
+     "LNMADR",
+     "LATITUDE",
+     "LONGITUDE",
+     "STRET_LT",
+     "STOR_NUMBER",
+     "APPN_YEAR",
+     "PHONE_NUMBER",
+     "INSTITUTION_NM",
+     "REFERENCE_DATE"
+    ]
+   }
+  },
+  "rows": [
+   {
+    "APPN_YEAR": "2004",
+    "REFERENCE_DATE": "2026-09-17",
+    "LONGITUDE": "128.5752095",
+    "RDNMADR": "대구광역시 서구 큰장로 81",
+    "STRET_LT": "1920",
+    "STRET_NM": "큰장길 침구류 명물거리",
+    "INSTITUTION_NM": "대구광역시 서구청",
+    "INSTT_NM": "대구광역시 서구",
+    "INSTT_CODE": "3430000",
+    "LNMADR": "대구광역시 서구 내당동 1008-46",
+    "PHONE_NUMBER": "053-663-2655",
+    "LATITUDE": "35.8668933",
+    "STOR_NUMBER": "74",
+    "STRET_INTRCN": "침구류 상점 운영"
+   },
+   {
+    "APPN_YEAR": "2008",
+    "REFERENCE_DATE": "2026-09-17",
+    "LONGITUDE": "128.5758974",
+    "RDNMADR": "대구광역시 서구 고성로",
+    "STRET_LT": "730",
+    "STRET_NM": "원대가구 명물거리",
+    "INSTITUTION_NM": "대구광역시 서구청",
+    "INSTT_NM": "대구광역시 서구",
+    "INSTT_CODE": "3430000",
+    "LNMADR": "대구광역시 서구 원대동1가 173",
+    "PHONE_NUMBER": "053-663-2655",
+    "LATITUDE": "35.88307256",
+    "STOR_NUMBER": "33",
+    "STRET_INTRCN": "유명브랜드 가구 및 사무용가구 전시 판매"
+   },
+   {
+    "APPN_YEAR": "2015",
+    "REFERENCE_DATE": "2026-09-17",
+    "LONGITUDE": "128.5722265",
+    "RDNMADR": "대구광역시 서구 달서로 144-8",
+    "STRET_LT": "280",
+    "STRET_NM": "서부오味가味거리",
+    "INSTITUTION_NM": "대구광역시 서구청",
+    "INSTT_NM": "대구광역시 서구",
+    "INSTT_CODE": "3430000",
+    "LNMADR": "대구광역시 서구 비산동 434-14",
+    "PHONE_NUMBER": "053-663-2655",
+    "LATITUDE": "35.87565992",
+    "STOR_NUMBER": "50",
+    "STRET_INTRCN": "전통시장을 현대화하여 다양한 매뉴의 음식점 운영"
+   }
+  ]
+ },
+ "_comment": "2026-11-09 공공데이터포털 공개 파일 경로(download/columList.json·standard.json, 서비스키 없음)의 실제 응답에서 header 핵심 필드와 행 일부를 옮겼다. 실측 totalCount: 전통시장 1393, 지역특화거리 274."
+}

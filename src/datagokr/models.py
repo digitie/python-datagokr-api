@@ -203,6 +203,42 @@ class PublicSpecialStreet(StandardItem):
     instt_code: str | None = None
     instt_nm: str | None = None
 
+    @field_validator("stor_number", "appn_year", mode="before")
+    @classmethod
+    def _lenient_int(cls, value: Any) -> Any:
+        # 공개 파일은 기형 행 하나로 전체를 거부한다 — 지자체 입력 숫자는 None으로 둔다(원문 raw).
+        return _lenient_int_value(value)
+
+    @field_validator("latitude", "longitude", "stret_lt", mode="before")
+    @classmethod
+    def _lenient_float(cls, value: Any) -> Any:
+        return _lenient_float_value(value)
+
+
+def _lenient_int_value(value: Any) -> Any:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, str):
+        text = value.strip()
+        return int(text) if _INT_TEXT_RE.fullmatch(text) else None
+    if isinstance(value, float):
+        return int(value) if math.isfinite(value) and value.is_integer() else None
+    return value
+
+
+def _lenient_float_value(value: Any) -> Any:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, str):
+        try:
+            value = float(value.strip())
+        except ValueError:
+            return None
+    if isinstance(value, int | float):
+        number = float(value)
+        return number if math.isfinite(number) else None
+    return value
+
 
 class PublicTraditionalMarket(StandardItem):
     """전국전통시장표준데이터(15012894) 1행. 필드명은 공식 응답 명세 그대로다.
@@ -228,36 +264,21 @@ class PublicTraditionalMarket(StandardItem):
     phone_number: str | None = Field(default=None, alias="phoneNumber")
     reference_date: date | None = Field(default=None, alias="referenceDate")
     instt_code: str | None = None
+    instt_nm: str | None = None
+    """제공기관명 — 공개 파일에만 있다(Open API 응답 명세에는 없다)."""
 
     @field_validator("stor_number", "estbl_year", mode="before")
     @classmethod
     def _lenient_int(cls, value: Any) -> Any:
         # 점포수·개설연도는 지자체가 직접 입력한 값이다. 비숫자 표기 하나 때문에 행
         # 전체가 검증 실패로 버려지지 않도록 None으로 두고 원문은 raw에 남긴다.
-        if isinstance(value, bool):
-            return None
-        if isinstance(value, str):
-            text = value.strip()
-            return int(text) if _INT_TEXT_RE.fullmatch(text) else None
-        if isinstance(value, float):
-            return int(value) if math.isfinite(value) and value.is_integer() else None
-        return value
+        return _lenient_int_value(value)
 
     @field_validator("latitude", "longitude", mode="before")
     @classmethod
     def _lenient_float(cls, value: Any) -> Any:
         # 좌표 결측·비숫자·비유한(NaN/inf) 표기는 None — 행은 주소로 살린다(원문은 raw).
-        if isinstance(value, bool):
-            return None
-        if isinstance(value, str):
-            try:
-                value = float(value.strip())
-            except ValueError:
-                return None
-        if isinstance(value, int | float):
-            number = float(value)
-            return number if math.isfinite(number) else None
-        return value
+        return _lenient_float_value(value)
 
     @field_validator("reference_date", mode="before")
     @classmethod

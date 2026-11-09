@@ -192,6 +192,10 @@ live 테스트는 실제 data.go.kr 엔드포인트를 호출하므로 `DATA_GO_
   소상공인시장진흥공단, 연간 갱신. 서비스키마다 이 API를 따로 활용신청해야 하며,
   신청하지 않은 키는 HTTP 403 `SERVICE_KEY_IS_NOT_REGISTERED_ERROR`를 받는다)
 
+전통시장·지역특화거리는 `iter_file_pages()`/`iter_file_all()`로 포털 공개 파일(15012894·15017322)을
+**서비스키 없이** 전량 받을 수 있다(2026-11-09 실측 1,393행·274행). 파일은 은퇴까지 결정하는 전체
+snapshot이므로 짧거나 기형인 파일은 성공으로 내지 않고 `ApiErrorResponse`(`FILE_*`)로 거부한다.
+
 TripMate/`kor-travel-map`(구 `python-krtour-map`) 큐레이션 후보로 쓰는 data.go.kr
 파일데이터 자동변환 API도 raw row 보존 형태로 포함합니다.
 

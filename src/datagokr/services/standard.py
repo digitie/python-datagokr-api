@@ -18,6 +18,11 @@ from datagokr.models import (
     StandardPage,
 )
 from datagokr.services import pagination
+from datagokr.services.standard_file import (
+    SPECIAL_STREET_FILE,
+    TRADITIONAL_MARKET_FILE,
+    StandardFileSource,
+)
 from datagokr.transport import AsyncTransport
 
 MUSEUM_ART_GALLERY_ENDPOINT = "tn_pubr_public_museum_artgr_info_api"
@@ -140,21 +145,67 @@ class TouristAttractionService(StandardOpenApiService[PublicTouristAttraction]):
 
 
 class SpecialStreetService(StandardOpenApiService[PublicSpecialStreet]):
-    def __init__(self, *, transport: AsyncTransport) -> None:
+    def __init__(
+        self, *, transport: AsyncTransport, public_transport: AsyncTransport | None = None,
+    ) -> None:
+        self._public_transport = public_transport
         super().__init__(
             transport=transport,
             endpoint=SPECIAL_STREET_ENDPOINT,
             model_type=PublicSpecialStreet,
         )
 
+    def _file(self) -> StandardFileSource[PublicSpecialStreet]:
+        if self._public_transport is None:
+            raise RuntimeError("public file transport is required; use DataGoKrClient")
+        return StandardFileSource(
+            transport=self._public_transport,
+            spec=SPECIAL_STREET_FILE,
+            model_type=PublicSpecialStreet,
+        )
+
+    def iter_file_pages(
+        self, *, num_of_rows: int = 10_000, max_pages: int | None = None,
+    ) -> AsyncIterator[StandardPage[PublicSpecialStreet]]:
+        """포털 공개 파일 전체(서비스키 불필요). 짧은·기형 파일은 거부한다."""
+        return self._file().iter_pages(num_of_rows=num_of_rows, max_pages=max_pages)
+
+    def iter_file_all(
+        self, *, num_of_rows: int = 10_000, max_pages: int | None = None,
+    ) -> AsyncIterator[PublicSpecialStreet]:
+        return self._file().iter_all(num_of_rows=num_of_rows, max_pages=max_pages)
+
 
 class TraditionalMarketService(StandardOpenApiService[PublicTraditionalMarket]):
-    def __init__(self, *, transport: AsyncTransport) -> None:
+    def __init__(
+        self, *, transport: AsyncTransport, public_transport: AsyncTransport | None = None,
+    ) -> None:
+        self._public_transport = public_transport
         super().__init__(
             transport=transport,
             endpoint=TRADITIONAL_MARKET_ENDPOINT,
             model_type=PublicTraditionalMarket,
         )
+
+    def _file(self) -> StandardFileSource[PublicTraditionalMarket]:
+        if self._public_transport is None:
+            raise RuntimeError("public file transport is required; use DataGoKrClient")
+        return StandardFileSource(
+            transport=self._public_transport,
+            spec=TRADITIONAL_MARKET_FILE,
+            model_type=PublicTraditionalMarket,
+        )
+
+    def iter_file_pages(
+        self, *, num_of_rows: int = 10_000, max_pages: int | None = None,
+    ) -> AsyncIterator[StandardPage[PublicTraditionalMarket]]:
+        """포털 공개 파일 전체(서비스키 불필요). 짧은·기형 파일은 거부한다."""
+        return self._file().iter_pages(num_of_rows=num_of_rows, max_pages=max_pages)
+
+    def iter_file_all(
+        self, *, num_of_rows: int = 10_000, max_pages: int | None = None,
+    ) -> AsyncIterator[PublicTraditionalMarket]:
+        return self._file().iter_all(num_of_rows=num_of_rows, max_pages=max_pages)
 
 
 class CulturalFestivalService(StandardOpenApiService[PublicCulturalFestival]):
