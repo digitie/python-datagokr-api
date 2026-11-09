@@ -123,14 +123,57 @@ async def test_short_page_is_rejected_not_published() -> None:
 
 
 @respx.mock
+async def test_free_form_numbers_keep_the_row() -> None:
+    header, rows = _case("special_street")
+    rows[1]["STOR_NUMBER"] = "약 30"
+    rows[1]["STRET_LT"] = "1.2km"
+    respx.get(HEADER_URL).respond(200, json=header)
+    respx.get(DATA_URL).respond(200, json=rows)
+    async with DataGoKrClient(max_rps=1000) as client:
+        items = [i async for i in client.special_street.iter_file_all()]
+    assert len(items) == 3
+    assert items[1].stor_number is None and items[1].stret_lt is None
+    assert items[1].raw["STOR_NUMBER"] == "약 30"
+
+
+@respx.mock
 async def test_invalid_row_rejects_the_whole_file() -> None:
     header, rows = _case("special_street")
-    rows[1]["STOR_NUMBER"] = "약 30"  # 특화거리 모델은 정수만 받는다
+    rows[1]["REFERENCE_DATE"] = {"nested": "not a date"}
     respx.get(HEADER_URL).respond(200, json=header)
     respx.get(DATA_URL).respond(200, json=rows)
     async with DataGoKrClient(max_rps=1000) as client:
         with pytest.raises(ApiErrorResponse, match="FILE_ROW_INVALID"):
             [i async for i in client.special_street.iter_file_all()]
+
+
+@respx.mock
+async def test_unknown_dataset_error_body_is_reported() -> None:
+    respx.get(HEADER_URL).respond(200, json={"error": "해당 표준데이터셋이 존재하지 않습니다."})
+    async with DataGoKrClient(max_rps=1000) as client:
+        with pytest.raises(ApiErrorResponse, match="존재하지 않습니다"):
+            [i async for i in client.traditional_market.iter_file_all()]
+
+
+@respx.mock
+async def test_html_data_page_is_rejected() -> None:
+    header, _ = _case("traditional_market")
+    respx.get(HEADER_URL).respond(200, json=header)
+    respx.get(DATA_URL).respond(200, content=b"<!doctype html><html></html>")
+    async with DataGoKrClient(max_rps=1000) as client:
+        with pytest.raises(ApiErrorResponse, match="FILE_PAGE_INVALID"):
+            [i async for i in client.traditional_market.iter_file_all()]
+
+
+@respx.mock
+async def test_page_limit_and_bounds() -> None:
+    header, _ = _case("traditional_market", total=1393)
+    respx.get(HEADER_URL).respond(200, json=header)
+    async with DataGoKrClient(max_rps=1000) as client:
+        with pytest.raises(ApiErrorResponse, match="FILE_PAGE_LIMIT"):
+            [i async for i in client.traditional_market.iter_file_all(num_of_rows=500, max_pages=2)]
+        with pytest.raises(ValueError, match="page bounds"):
+            [i async for i in client.traditional_market.iter_file_all(num_of_rows=0)]
 
 
 @respx.mock

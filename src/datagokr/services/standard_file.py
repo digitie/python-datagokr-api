@@ -85,7 +85,9 @@ def _header(content: bytes, spec: StandardFileSpec) -> tuple[int, str, tuple[str
         raise _error("FILE_HEADER_INVALID", spec)
     total, table = value.get("totalCount"), value.get("tableVO")
     if type(total) is not int or not 0 < total < FILE_ROW_LIMIT or not isinstance(table, dict):
-        raise _error("FILE_TOTAL_INVALID_OR_LIMITED", spec, repr(total))
+        # 없는 dataset은 HTTP 200 + {"error": "..."}다 — 포털 문구를 그대로 싣는다.
+        portal = value.get("error")
+        raise _error("FILE_TOTAL_INVALID_OR_LIMITED", spec, str(portal or repr(total)))
     name, columns = table.get("svcTableNm"), table.get("colNmList")
     if (
         table.get("publicDataPk") != spec.dataset_id
