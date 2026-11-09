@@ -9,6 +9,12 @@
 
 ### Added
 
+- `traditional_market.iter_file_pages()/iter_file_all()`와 `special_street.iter_file_pages()/iter_file_all()`가
+  포털 공개 파일 경로로 표준데이터 전체를 **서비스키 없이** 받는다(`services/standard_file.py`).
+  선언 건수 0·5만 건 상한·짧은 페이지·기형 행·전후 메타데이터 변경은 거부하고, UTF-8(BOM)·CP949를
+  모두 읽는다. 대문자 원천 컬럼은 소문자로 typed 필드에 대응하고 원문은 raw에 남긴다.
+  `PublicTraditionalMarket.instt_nm` 추가(파일에만 있다).
+
 - `DataGoKrClient.traditional_market`에 전국전통시장표준데이터(15012894,
   `tn_pubr_public_trdit_mrkt_api`) 조회와 `PublicTraditionalMarket` 모델을 추가한다.
   점포수·개설연도·좌표의 비숫자 표기는 행을 버리지 않고 None으로 두며 원문은 raw에 남는다.

@@ -228,6 +228,8 @@ class PublicTraditionalMarket(StandardItem):
     phone_number: str | None = Field(default=None, alias="phoneNumber")
     reference_date: date | None = Field(default=None, alias="referenceDate")
     instt_code: str | None = None
+    instt_nm: str | None = None
+    """제공기관명 — 공개 파일에만 있다(Open API 응답 명세에는 없다)."""
 
     @field_validator("stor_number", "estbl_year", mode="before")
     @classmethod
