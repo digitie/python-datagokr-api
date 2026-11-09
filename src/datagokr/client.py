@@ -19,6 +19,7 @@ from datagokr.services import (
     TagoIntercityBusService,
     TagoTrainService,
     TouristAttractionService,
+    TraditionalMarketService,
 )
 from datagokr.services.file_data import FileDataService
 from datagokr.transport import AsyncHttpxTransport
@@ -48,6 +49,7 @@ class DataGoKrClient:
         self.tourist_attraction = TouristAttractionService(transport=self._transport)
         self.festival = CulturalFestivalService(transport=self._transport)
         self.special_street = SpecialStreetService(transport=self._transport)
+        self.traditional_market = TraditionalMarketService(transport=self._transport)
         self.file_data = FileDataService(transport=self._transport)
         self.agri_weather = AgriWeatherService(transport=self._transport)
         self.kwater_sluice = KwaterSluiceService(transport=self._transport)

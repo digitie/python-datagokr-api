@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import math
 import re
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -201,6 +202,79 @@ class PublicSpecialStreet(StandardItem):
     reference_date: date | None = Field(default=None, alias="referenceDate")
     instt_code: str | None = None
     instt_nm: str | None = None
+
+
+class PublicTraditionalMarket(StandardItem):
+    """전국전통시장표준데이터(15012894) 1행. 필드명은 공식 응답 명세 그대로다.
+
+    안정 관리번호 컬럼이 없다 — `instt_code`는 제공기관(지자체) 코드라 같은 기관의
+    시장 여러 곳이 공유한다. 호출자는 시장명과 주소로 자연키를 만든다.
+    """
+
+    mrkt_nm: str | None = Field(default=None, alias="mrktNm")
+    mrkt_type: str | None = Field(default=None, alias="mrktType")
+    rdnmadr: str | None = None
+    lnmadr: str | None = None
+    mrkt_estbl_cycle: str | None = Field(default=None, alias="mrktEstblCycle")
+    latitude: float | None = None
+    longitude: float | None = None
+    stor_number: int | None = Field(default=None, alias="storNumber")
+    trtmnt_prdlst: str | None = Field(default=None, alias="trtmntPrdlst")
+    use_gcct: str | None = Field(default=None, alias="useGcct")
+    homepage_url: str | None = Field(default=None, alias="homepageUrl")
+    pblic_toilet_yn: str | None = Field(default=None, alias="pblicToiletYn")
+    prkplce_yn: str | None = Field(default=None, alias="prkplceYn")
+    estbl_year: int | None = Field(default=None, alias="estblYear")
+    phone_number: str | None = Field(default=None, alias="phoneNumber")
+    reference_date: date | None = Field(default=None, alias="referenceDate")
+    instt_code: str | None = None
+
+    @field_validator("stor_number", "estbl_year", mode="before")
+    @classmethod
+    def _lenient_int(cls, value: Any) -> Any:
+        # 점포수·개설연도는 지자체가 직접 입력한 값이다. 비숫자 표기 하나 때문에 행
+        # 전체가 검증 실패로 버려지지 않도록 None으로 두고 원문은 raw에 남긴다.
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, str):
+            text = value.strip()
+            return int(text) if _INT_TEXT_RE.fullmatch(text) else None
+        if isinstance(value, float):
+            return int(value) if math.isfinite(value) and value.is_integer() else None
+        return value
+
+    @field_validator("latitude", "longitude", mode="before")
+    @classmethod
+    def _lenient_float(cls, value: Any) -> Any:
+        # 좌표 결측·비숫자·비유한(NaN/inf) 표기는 None — 행은 주소로 살린다(원문은 raw).
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, str):
+            try:
+                value = float(value.strip())
+            except ValueError:
+                return None
+        if isinstance(value, int | float):
+            number = float(value)
+            return number if math.isfinite(number) else None
+        return value
+
+    @field_validator("reference_date", mode="before")
+    @classmethod
+    def _lenient_date(cls, value: Any) -> Any:
+        # 데이터기준일자가 ISO 형식이 아니어도 행을 버리지 않는다(원문은 raw).
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        if isinstance(value, str):
+            text = value.strip()
+            for fmt in ("%Y-%m-%d", "%Y%m%d", "%Y.%m.%d", "%Y/%m/%d"):
+                try:
+                    return datetime.strptime(text, fmt).date()
+                except ValueError:
+                    continue
+        return None
 
 
 class PublicCulturalFestival(StandardItem):

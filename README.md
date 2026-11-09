@@ -8,7 +8,7 @@
 (data.go.kr) 표준데이터 Open API, 파일데이터 자동변환 API, 개별 OpenAPI 일부를 감싸는 작은
 typed Python client 라이브러리입니다. `DataGoKrClient`는 async 전용 인터페이스로 서비스별
 속성(`museum_art`, `parking`, `tourist_attraction`, `festival`, `special_street`,
-`file_data`, `agri_weather`, `kwater_sluice`, `express_bus`, `intercity_bus`, `train`)을 제공하며, 모든 응답을 Pydantic v2 모델로
+`traditional_market`, `file_data`, `agri_weather`, `kwater_sluice`, `express_bus`, `intercity_bus`, `train`)을 제공하며, 모든 응답을 Pydantic v2 모델로
 typed 변환합니다.
 
 최근 변경 사항은 [`CHANGELOG.md`](CHANGELOG.md)의 `[Unreleased]`를 참고합니다.
@@ -17,7 +17,7 @@ typed 변환합니다.
 
 | 표면 | 진입점 | 설명 |
 |------|--------|------|
-| 표준데이터 5종 | `client.museum_art` / `client.parking` / `client.tourist_attraction` / `client.festival` / `client.special_street` | 박물관미술관·주차장·관광지·문화축제·지역특화거리 표준데이터 Open API |
+| 표준데이터 6종 | `client.museum_art` / `client.parking` / `client.tourist_attraction` / `client.festival` / `client.special_street` / `client.traditional_market` | 박물관미술관·주차장·관광지·문화축제·지역특화거리·전통시장 표준데이터 Open API |
 | 파일데이터 자동변환 4종 | `client.file_data` | 서울 책방, 경기 무슬림 친화 음식점, 안산 세계맛집, 제주 향토음식점 raw row 보존 조회 |
 | 개별 OpenAPI 2종 | `client.agri_weather` / `client.kwater_sluice` | 농업기상 관측지점 상세정보, 한국수자원공사 수문 운영 정보 |
 | TAGO 버스 2종 | `client.express_bus` / `client.intercity_bus` | 고속·시외버스 터미널·도시·등급 및 출발/도착지 기준 운행정보 |
@@ -181,13 +181,16 @@ live 테스트는 실제 data.go.kr 엔드포인트를 호출하므로 `DATA_GO_
 
 ## 데이터 출처
 
-현재 포함한 표준데이터셋은 아래 다섯 가지입니다.
+현재 포함한 표준데이터셋은 아래 여섯 가지입니다.
 
 - 전국박물관미술관정보표준데이터: `tn_pubr_public_museum_artgr_info_api`
 - 전국주차장정보표준데이터: `tn_pubr_prkplce_info_api`
 - 전국관광지정보표준데이터: `tn_pubr_public_trrsrt_api`
 - 전국문화축제표준데이터: `tn_pubr_public_cltur_fstvl_api`
 - 전국지역특화거리표준데이터: `tn_pubr_public_area_spcliz_stret_api`
+- 전국전통시장표준데이터: `tn_pubr_public_trdit_mrkt_api` (공공데이터포털 15012894,
+  소상공인시장진흥공단, 연간 갱신. 서비스키마다 이 API를 따로 활용신청해야 하며,
+  신청하지 않은 키는 HTTP 403 `SERVICE_KEY_IS_NOT_REGISTERED_ERROR`를 받는다)
 
 TripMate/`kor-travel-map`(구 `python-krtour-map`) 큐레이션 후보로 쓰는 data.go.kr
 파일데이터 자동변환 API도 raw row 보존 형태로 포함합니다.
@@ -210,7 +213,7 @@ TripMate 문서에서 별도 `python-*-api` 소유가 없는 data.go.kr OpenAPI�
 |------|------|
 | `src/datagokr/client.py` | `DataGoKrClient` 진입점과 서비스 속성 조립 |
 | `src/datagokr/config.py` | 환경변수·인증키·RustFS 설정 로딩 |
-| `src/datagokr/services/standard.py` | 표준데이터 5종 서비스 |
+| `src/datagokr/services/standard.py` | 표준데이터 6종 서비스 |
 | `src/datagokr/services/file_data.py` | 파일데이터 자동변환 카탈로그와 서비스 |
 | `src/datagokr/services/openapi.py` | 개별 OpenAPI(농업기상, 수문, TAGO 버스) 서비스 |
 | `src/datagokr/models.py` | Pydantic v2 응답 모델 |

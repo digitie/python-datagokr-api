@@ -25,6 +25,7 @@ from datagokr.services.standard import (
     PARKING_LOT_ENDPOINT,
     SPECIAL_STREET_ENDPOINT,
     TOURIST_ATTRACTION_ENDPOINT,
+    TRADITIONAL_MARKET_ENDPOINT,
 )
 
 SERVICE_KEY_PARAM: Final = "serviceKey"
@@ -124,7 +125,7 @@ def _std(
     endpoint: str,
     service_attr: str,
 ) -> ApiCatalogEntry:
-    """표준데이터 5종처럼 파일링/응답형식이 균일한 항목을 위한 축약 생성자."""
+    """표준데이터 6종처럼 파일링/응답형식이 균일한 항목을 위한 축약 생성자."""
 
     return ApiCatalogEntry(
         key=key,
@@ -238,6 +239,17 @@ _CATALOG_ROWS: Final[tuple[ApiCatalogEntry, ...]] = (
         ),
         endpoint=SPECIAL_STREET_ENDPOINT,
         service_attr="special_street",
+    ),
+    _std(
+        "traditional_market",
+        title="전국전통시장표준데이터",
+        description_lines=(
+            "지자체가 전통시장으로 인정한 전국 시장의 위치와 편의시설 표준 데이터를 조회합니다.",
+            "리스트 응답이며 각 항목은 시장명, 시장유형, 개설주기, 위경도, 점포수, "
+            "화장실·주차장 보유여부 등을 포함합니다.",
+        ),
+        endpoint=TRADITIONAL_MARKET_ENDPOINT,
+        service_attr="traditional_market",
     ),
     _file_data("datagokr_seoul_bookstores"),
     _file_data("datagokr_gyeonggi_muslim_friendly_restaurants"),

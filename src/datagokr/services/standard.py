@@ -13,6 +13,7 @@ from datagokr.models import (
     PublicParkingLot,
     PublicSpecialStreet,
     PublicTouristAttraction,
+    PublicTraditionalMarket,
     StandardItem,
     StandardPage,
 )
@@ -24,6 +25,7 @@ PARKING_LOT_ENDPOINT = "tn_pubr_prkplce_info_api"
 TOURIST_ATTRACTION_ENDPOINT = "tn_pubr_public_trrsrt_api"
 CULTURAL_FESTIVAL_ENDPOINT = "tn_pubr_public_cltur_fstvl_api"
 SPECIAL_STREET_ENDPOINT = "tn_pubr_public_area_spcliz_stret_api"
+TRADITIONAL_MARKET_ENDPOINT = "tn_pubr_public_trdit_mrkt_api"
 
 DEFAULT_MAX_PAGES = 10_000
 
@@ -143,6 +145,15 @@ class SpecialStreetService(StandardOpenApiService[PublicSpecialStreet]):
             transport=transport,
             endpoint=SPECIAL_STREET_ENDPOINT,
             model_type=PublicSpecialStreet,
+        )
+
+
+class TraditionalMarketService(StandardOpenApiService[PublicTraditionalMarket]):
+    def __init__(self, *, transport: AsyncTransport) -> None:
+        super().__init__(
+            transport=transport,
+            endpoint=TRADITIONAL_MARKET_ENDPOINT,
+            model_type=PublicTraditionalMarket,
         )
 
 
