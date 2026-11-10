@@ -241,7 +241,8 @@ async def test_parking_file_maps_numbers_and_blank_strings() -> None:
     respx.get(HEADER_URL).respond(200, json=header)
     respx.get(DATA_URL).respond(200, json=rows)
     async with DataGoKrClient(max_rps=1000) as client:
-        first = [i async for i in client.parking.iter_file_all()][0]
+        items = [i async for i in client.parking.iter_file_all()]
+    first = items[0]
     assert first.prkcmprt == int(rows[0]["PRKCMPRT"])
     assert first.latitude == pytest.approx(float(rows[0]["LATITUDE"]))
     assert first.reference_date is not None

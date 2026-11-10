@@ -49,9 +49,15 @@ class DataGoKrClient:
         self._public_transport = AsyncHttpxTransport(
             replace(self.config, api_key=None), rate_limiter=self._transport.rate_limiter,
         )
-        self.museum_art = MuseumArtGalleryService(transport=self._transport)
-        self.parking = ParkingLotService(transport=self._transport)
-        self.tourist_attraction = TouristAttractionService(transport=self._transport)
+        self.museum_art = MuseumArtGalleryService(
+            transport=self._transport, public_transport=self._public_transport,
+        )
+        self.parking = ParkingLotService(
+            transport=self._transport, public_transport=self._public_transport,
+        )
+        self.tourist_attraction = TouristAttractionService(
+            transport=self._transport, public_transport=self._public_transport,
+        )
         self.festival = CulturalFestivalService(transport=self._transport)
         self.special_street = SpecialStreetService(
             transport=self._transport, public_transport=self._public_transport,

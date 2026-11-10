@@ -60,6 +60,25 @@ SPECIAL_STREET_FILE = StandardFileSpec(
     table_name="tn_pubr_public_area_spcliz_stret_svc",
     required_columns=frozenset({"STRET_NM", "RDNMADR", "LNMADR", "LATITUDE", "LONGITUDE"}),
 )
+# 2026-11-10 실측 — 주차장 18,994행·박물관미술관 1,070행·관광지 897행. 운영 키가 Open API에서
+# 403(SERVICE_KEY_IS_NOT_REGISTERED_ERROR)을 받아도 공개 파일은 받는다.
+PARKING_LOT_FILE = StandardFileSpec(
+    dataset_id="15012896",
+    table_name="tn_pubr_prkplce_info_svc",
+    required_columns=frozenset(
+        {"PRKPLCE_NO", "PRKPLCE_NM", "RDNMADR", "LNMADR", "LATITUDE", "LONGITUDE"}
+    ),
+)
+MUSEUM_ART_GALLERY_FILE = StandardFileSpec(
+    dataset_id="15017323",
+    table_name="tn_pubr_public_museum_artgr_info_svc",
+    required_columns=frozenset({"FCLTY_NM", "RDNMADR", "LNMADR", "LATITUDE", "LONGITUDE"}),
+)
+TOURIST_ATTRACTION_FILE = StandardFileSpec(
+    dataset_id="15021141",
+    table_name="tn_pubr_public_trrsrt_svc",
+    required_columns=frozenset({"TRRSRT_NM", "RDNMADR", "LNMADR", "LATITUDE", "LONGITUDE"}),
+)
 
 
 def _error(code: str, spec: StandardFileSpec, detail: str = "") -> ApiErrorResponse:
@@ -181,7 +200,10 @@ __all__ = [
     "DATA_URL",
     "FILE_ROW_LIMIT",
     "HEADER_URL",
+    "MUSEUM_ART_GALLERY_FILE",
+    "PARKING_LOT_FILE",
     "SPECIAL_STREET_FILE",
+    "TOURIST_ATTRACTION_FILE",
     "TRADITIONAL_MARKET_FILE",
     "StandardFileSource",
     "StandardFileSpec",
