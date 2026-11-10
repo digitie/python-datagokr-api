@@ -61,8 +61,8 @@ SPECIAL_STREET_FILE = StandardFileSpec(
     required_columns=frozenset({"STRET_NM", "RDNMADR", "LNMADR", "LATITUDE", "LONGITUDE"}),
 )
 # 2026-11-10 실측 — 주차장 18,994행(2페이지 — 페이지 크기 1만·5천·단일 페이지 결과가 같다)·
-# 박물관미술관 1,070행·관광지 897행. 주차장 행에는 ``colNmList``에 없는 ``INSTT_CODE``도 실린다. 운영 키가 Open API에서
-# 403(SERVICE_KEY_IS_NOT_REGISTERED_ERROR)을 받아도 공개 파일은 받는다.
+# 박물관미술관 1,070행·관광지 897행. 주차장 행에는 ``colNmList``에 없는 ``INSTT_CODE``도 실린다.
+# 운영 키가 Open API에서 403(SERVICE_KEY_IS_NOT_REGISTERED_ERROR)을 받아도 공개 파일은 받는다.
 PARKING_LOT_FILE = StandardFileSpec(
     dataset_id="15012896",
     table_name="tn_pubr_prkplce_info_svc",
