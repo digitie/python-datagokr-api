@@ -9,6 +9,11 @@
 
 ### Added
 
+- `parking`·`museum_art`·`tourist_attraction`도 `iter_file_pages()/iter_file_all()`로 포털 공개 파일
+  (15012896·15017323·15021141)을 **서비스키 없이** 받는다 — 운영 키가 Open API에서 403
+  (`SERVICE_KEY_IS_NOT_REGISTERED_ERROR`)을 받는 dataset이다. 파일을 가진 다섯 service가
+  `StandardFileBackedService` 하나를 공유한다. 검산 규칙은 전통시장·특화거리와 같다.
+
 - `traditional_market.iter_file_pages()/iter_file_all()`와 `special_street.iter_file_pages()/iter_file_all()`가
   포털 공개 파일 경로로 표준데이터 전체를 **서비스키 없이** 받는다(`services/standard_file.py`).
   선언 건수 0·5만 건 상한·짧은 페이지·기형 행·전후 메타데이터 변경은 거부하고, UTF-8(BOM)·CP949를

@@ -202,3 +202,58 @@ def test_service_without_public_transport_refuses_file() -> None:
 
     with pytest.raises(RuntimeError, match="public file transport"):
         TraditionalMarketService(transport=_Null()).iter_file_pages()
+
+
+@pytest.mark.parametrize(
+    ("name", "pk", "key_column", "key_field"),
+    [
+        ("parking", "15012896", "PRKPLCE_NO", "prkplce_no"),
+        ("museum_art", "15017323", "FCLTY_NM", "fclty_nm"),
+        ("tourist_attraction", "15021141", "TRRSRT_NM", "trrsrt_nm"),
+    ],
+)
+@respx.mock
+async def test_parking_museum_tourist_files_are_keyless(
+    monkeypatch: pytest.MonkeyPatch, name: str, pk: str, key_column: str, key_field: str,
+) -> None:
+    """주차장·박물관미술관·관광지도 Open API 활용신청 없이 포털 공개 파일로 받는다(2026-11-10)."""
+    monkeypatch.setenv("DATA_GO_KR_SERVICE_KEY", "must-not-be-sent")
+    header, rows = _case(name)
+    respx.get(HEADER_URL).respond(200, json=header)
+    respx.get(DATA_URL).respond(200, json=rows)
+    async with DataGoKrClient(api_key="also-must-not-be-sent", max_rps=1000) as client:
+        items = [i async for i in getattr(client, name).iter_file_all()]
+
+    assert [getattr(i, key_field) for i in items] == [r[key_column] for r in rows]
+    assert all(i.raw[key_column] == getattr(i, key_field) for i in items)
+    assert all(i.latitude is not None for i in items)
+    assert respx.calls[0].request.url.params["pk"] == pk
+    data = [c.request for c in respx.calls if c.request.url.path.endswith("standard.json")]
+    assert data[0].url.params["publicDataPk"] == pk
+    assert data[0].url.params["svcTableNm"] == header["tableVO"]["svcTableNm"]
+    for call in respx.calls:
+        assert "serviceKey" not in call.request.url.params
+
+
+@respx.mock
+async def test_parking_file_maps_numbers_and_blank_strings() -> None:
+    header, rows = _case("parking")
+    respx.get(HEADER_URL).respond(200, json=header)
+    respx.get(DATA_URL).respond(200, json=rows)
+    async with DataGoKrClient(max_rps=1000) as client:
+        items = [i async for i in client.parking.iter_file_all()]
+    first = items[0]
+    assert first.prkcmprt == int(rows[0]["PRKCMPRT"])
+    assert first.latitude == pytest.approx(float(rows[0]["LATITUDE"]))
+    assert first.reference_date is not None
+    assert rows[0]["RDNMADR"] == "" and first.rdnmadr is None
+
+
+@respx.mock
+async def test_parking_file_rejects_another_datasets_header() -> None:
+    header, _ = _case("parking")
+    header["tableVO"]["svcTableNm"] = "tn_pubr_public_trrsrt_svc"
+    respx.get(HEADER_URL).respond(200, json=header)
+    async with DataGoKrClient(max_rps=1000) as client:
+        with pytest.raises(ApiErrorResponse, match="FILE_COLUMNS_INVALID"):
+            [i async for i in client.parking.iter_file_all()]

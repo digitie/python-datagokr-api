@@ -19,9 +19,13 @@ from datagokr.models import (
 )
 from datagokr.services import pagination
 from datagokr.services.standard_file import (
+    MUSEUM_ART_GALLERY_FILE,
+    PARKING_LOT_FILE,
     SPECIAL_STREET_FILE,
+    TOURIST_ATTRACTION_FILE,
     TRADITIONAL_MARKET_FILE,
     StandardFileSource,
+    StandardFileSpec,
 )
 from datagokr.transport import AsyncTransport
 
@@ -117,95 +121,108 @@ class StandardOpenApiService(Generic[T]):
         )
 
 
-class MuseumArtGalleryService(StandardOpenApiService[PublicMuseumArtGallery]):
-    def __init__(self, *, transport: AsyncTransport) -> None:
+class StandardFileBackedService(StandardOpenApiService[T]):
+    """Open API와 포털 공개 파일(서비스키 불필요)을 함께 가진 표준데이터 service.
+
+    파일 전송은 ``DataGoKrClient``가 서비스키 없이 만든 ``public_transport``다. 운영 키가 Open
+    API에서 403(활용신청 없음)을 받아도 파일은 받는다.
+    """
+
+    def __init__(
+        self,
+        *,
+        transport: AsyncTransport,
+        endpoint: str,
+        model_type: type[T],
+        file_spec: StandardFileSpec,
+        public_transport: AsyncTransport | None = None,
+    ) -> None:
+        self._public_transport = public_transport
+        self._file_spec = file_spec
+        super().__init__(transport=transport, endpoint=endpoint, model_type=model_type)
+
+    def _file(self) -> StandardFileSource[T]:
+        if self._public_transport is None:
+            raise RuntimeError("public file transport is required; use DataGoKrClient")
+        return StandardFileSource(
+            transport=self._public_transport, spec=self._file_spec, model_type=self._model_type,
+        )
+
+    def iter_file_pages(
+        self, *, num_of_rows: int = 10_000, max_pages: int | None = None,
+    ) -> AsyncIterator[StandardPage[T]]:
+        """포털 공개 파일 전체(서비스키 불필요). 짧은·기형 파일은 거부한다."""
+        return self._file().iter_pages(num_of_rows=num_of_rows, max_pages=max_pages)
+
+    def iter_file_all(
+        self, *, num_of_rows: int = 10_000, max_pages: int | None = None,
+    ) -> AsyncIterator[T]:
+        return self._file().iter_all(num_of_rows=num_of_rows, max_pages=max_pages)
+
+
+class MuseumArtGalleryService(StandardFileBackedService[PublicMuseumArtGallery]):
+    def __init__(
+        self, *, transport: AsyncTransport, public_transport: AsyncTransport | None = None,
+    ) -> None:
         super().__init__(
             transport=transport,
             endpoint=MUSEUM_ART_GALLERY_ENDPOINT,
             model_type=PublicMuseumArtGallery,
+            file_spec=MUSEUM_ART_GALLERY_FILE,
+            public_transport=public_transport,
         )
 
 
-class ParkingLotService(StandardOpenApiService[PublicParkingLot]):
-    def __init__(self, *, transport: AsyncTransport) -> None:
+class ParkingLotService(StandardFileBackedService[PublicParkingLot]):
+    def __init__(
+        self, *, transport: AsyncTransport, public_transport: AsyncTransport | None = None,
+    ) -> None:
         super().__init__(
             transport=transport,
             endpoint=PARKING_LOT_ENDPOINT,
             model_type=PublicParkingLot,
+            file_spec=PARKING_LOT_FILE,
+            public_transport=public_transport,
         )
 
 
-class TouristAttractionService(StandardOpenApiService[PublicTouristAttraction]):
-    def __init__(self, *, transport: AsyncTransport) -> None:
+class TouristAttractionService(StandardFileBackedService[PublicTouristAttraction]):
+    def __init__(
+        self, *, transport: AsyncTransport, public_transport: AsyncTransport | None = None,
+    ) -> None:
         super().__init__(
             transport=transport,
             endpoint=TOURIST_ATTRACTION_ENDPOINT,
             model_type=PublicTouristAttraction,
+            file_spec=TOURIST_ATTRACTION_FILE,
+            public_transport=public_transport,
         )
 
 
-class SpecialStreetService(StandardOpenApiService[PublicSpecialStreet]):
+class SpecialStreetService(StandardFileBackedService[PublicSpecialStreet]):
     def __init__(
         self, *, transport: AsyncTransport, public_transport: AsyncTransport | None = None,
     ) -> None:
-        self._public_transport = public_transport
         super().__init__(
             transport=transport,
             endpoint=SPECIAL_STREET_ENDPOINT,
             model_type=PublicSpecialStreet,
+            file_spec=SPECIAL_STREET_FILE,
+            public_transport=public_transport,
         )
 
-    def _file(self) -> StandardFileSource[PublicSpecialStreet]:
-        if self._public_transport is None:
-            raise RuntimeError("public file transport is required; use DataGoKrClient")
-        return StandardFileSource(
-            transport=self._public_transport,
-            spec=SPECIAL_STREET_FILE,
-            model_type=PublicSpecialStreet,
-        )
 
-    def iter_file_pages(
-        self, *, num_of_rows: int = 10_000, max_pages: int | None = None,
-    ) -> AsyncIterator[StandardPage[PublicSpecialStreet]]:
-        """포털 공개 파일 전체(서비스키 불필요). 짧은·기형 파일은 거부한다."""
-        return self._file().iter_pages(num_of_rows=num_of_rows, max_pages=max_pages)
-
-    def iter_file_all(
-        self, *, num_of_rows: int = 10_000, max_pages: int | None = None,
-    ) -> AsyncIterator[PublicSpecialStreet]:
-        return self._file().iter_all(num_of_rows=num_of_rows, max_pages=max_pages)
-
-
-class TraditionalMarketService(StandardOpenApiService[PublicTraditionalMarket]):
+class TraditionalMarketService(StandardFileBackedService[PublicTraditionalMarket]):
     def __init__(
         self, *, transport: AsyncTransport, public_transport: AsyncTransport | None = None,
     ) -> None:
-        self._public_transport = public_transport
         super().__init__(
             transport=transport,
             endpoint=TRADITIONAL_MARKET_ENDPOINT,
             model_type=PublicTraditionalMarket,
+            file_spec=TRADITIONAL_MARKET_FILE,
+            public_transport=public_transport,
         )
-
-    def _file(self) -> StandardFileSource[PublicTraditionalMarket]:
-        if self._public_transport is None:
-            raise RuntimeError("public file transport is required; use DataGoKrClient")
-        return StandardFileSource(
-            transport=self._public_transport,
-            spec=TRADITIONAL_MARKET_FILE,
-            model_type=PublicTraditionalMarket,
-        )
-
-    def iter_file_pages(
-        self, *, num_of_rows: int = 10_000, max_pages: int | None = None,
-    ) -> AsyncIterator[StandardPage[PublicTraditionalMarket]]:
-        """포털 공개 파일 전체(서비스키 불필요). 짧은·기형 파일은 거부한다."""
-        return self._file().iter_pages(num_of_rows=num_of_rows, max_pages=max_pages)
-
-    def iter_file_all(
-        self, *, num_of_rows: int = 10_000, max_pages: int | None = None,
-    ) -> AsyncIterator[PublicTraditionalMarket]:
-        return self._file().iter_all(num_of_rows=num_of_rows, max_pages=max_pages)
 
 
 class CulturalFestivalService(StandardOpenApiService[PublicCulturalFestival]):
