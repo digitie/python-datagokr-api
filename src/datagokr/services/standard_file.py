@@ -5,7 +5,7 @@
 않는다 — 활용신청하지 않은 키가 Open API에서 403을 받는 dataset도 여기서는 받는다
 (2026-11-09 실측: 전통시장 1,393행·지역특화거리 274행).
 
-같은 경로를 쓰는 주차장 파일(미머지 PR #22 ``parking_file``)과 검산 규칙을 맞춘다: 선언
+주차장·박물관미술관·관광지 파일도 같은 경로·같은 검산 규칙을 쓴다(2026-11-10): 선언
 건수가 0이거나 포털 다운로드 상한(5만 건)에 닿으면 거부, 페이지 길이가 선언과 다르면 거부,
 순회 전후 메타데이터가 바뀌면 거부. 소비자는 전체 순회가 끝난 뒤에만 게시(은퇴 포함)한다.
 
@@ -60,7 +60,8 @@ SPECIAL_STREET_FILE = StandardFileSpec(
     table_name="tn_pubr_public_area_spcliz_stret_svc",
     required_columns=frozenset({"STRET_NM", "RDNMADR", "LNMADR", "LATITUDE", "LONGITUDE"}),
 )
-# 2026-11-10 실측 — 주차장 18,994행·박물관미술관 1,070행·관광지 897행. 운영 키가 Open API에서
+# 2026-11-10 실측 — 주차장 18,994행(2페이지 — 페이지 크기 1만·5천·단일 페이지 결과가 같다)·
+# 박물관미술관 1,070행·관광지 897행. 주차장 행에는 ``colNmList``에 없는 ``INSTT_CODE``도 실린다. 운영 키가 Open API에서
 # 403(SERVICE_KEY_IS_NOT_REGISTERED_ERROR)을 받아도 공개 파일은 받는다.
 PARKING_LOT_FILE = StandardFileSpec(
     dataset_id="15012896",
