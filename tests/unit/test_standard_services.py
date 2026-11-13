@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import pytest
 
 from datagokr.exceptions import ApiErrorResponse
+from datagokr.models import PublicParkingLot
 from datagokr.services import (
     CULTURAL_FESTIVAL_ENDPOINT,
     MUSEUM_ART_GALLERY_ENDPOINT,
@@ -71,6 +73,54 @@ async def test_museum_art_service_parses_standard_json_response() -> None:
     )
 
 
+async def test_parking_service_preserves_institution_identity() -> None:
+    rows = [
+        {"prkplceNo": "P-1", "insttCode": "001", "insttNm": "First institution"},
+        {"prkplceNo": "P-1", "insttCode": "002", "insttNm": "Second institution"},
+    ]
+    transport = FakeTransport(
+        json.dumps({"response": {"body": {"items": rows, "totalCount": 2}}}).encode()
+    )
+    service = ParkingLotService(transport=transport)
+
+    page = await service.list()
+
+    assert [(item.instt_code, item.instt_nm) for item in page.items] == [
+        ("001", "First institution"),
+        ("002", "Second institution"),
+    ]
+    assert len({(item.instt_code, item.prkplce_no) for item in page.items}) == 2
+    assert [item.raw for item in page.items] == rows
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        {"insttCode": "001", "insttNm": "Institution"},
+        {"instt_code": "001", "instt_nm": "Institution"},
+    ],
+)
+def test_parking_institution_alias_and_field_names(values: dict[str, str]) -> None:
+    item = PublicParkingLot.model_validate(values)
+
+    assert item.instt_code == "001"
+    assert item.instt_nm == "Institution"
+    assert item.model_dump()["instt_code"] == "001"
+    assert item.model_dump(by_alias=True)["insttCode"] == "001"
+    assert item.model_dump(by_alias=True)["insttNm"] == "Institution"
+
+
+@pytest.mark.parametrize(
+    "values",
+    [{}, {"insttCode": None, "insttNm": None}, {"insttCode": "", "insttNm": ""}],
+)
+def test_parking_institution_optional(values: dict[str, str | None]) -> None:
+    item = PublicParkingLot.model_validate(values)
+
+    assert item.instt_code is None
+    assert item.instt_nm is None
+
+
 async def test_parking_service_accepts_xml_response() -> None:
     transport = FakeTransport(
         b"""
@@ -82,6 +132,8 @@ async def test_parking_service_accepts_xml_response() -> None:
                 <prkplceNo>P-1</prkplceNo>
                 <prkplceNm>Central Parking</prkplceNm>
                 <prkcmprt>42</prkcmprt>
+                <insttCode>003</insttCode>
+                <insttNm>XML institution</insttNm>
               </item>
             </items>
             <totalCount>1</totalCount>
@@ -98,6 +150,8 @@ async def test_parking_service_accepts_xml_response() -> None:
     assert page.items[0].prkplce_no == "P-1"
     assert page.items[0].prkplce_nm == "Central Parking"
     assert page.items[0].prkcmprt == 42
+    assert page.items[0].instt_code == "003"
+    assert page.items[0].instt_nm == "XML institution"
     assert transport.calls[0][0] == PARKING_LOT_ENDPOINT
 
 

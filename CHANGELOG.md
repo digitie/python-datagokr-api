@@ -7,6 +7,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- 공공주차장 응답의 `insttCode`·`insttNm`을 기관 코드·기관명 필드로 파싱해 기관별 주차장 식별자를 보존한다. 기존 `instt_code`·`instt_nm` 입력도 계속 지원한다.
+
 ### Added
 
 - `parking`·`museum_art`·`tourist_attraction`도 `iter_file_pages()/iter_file_all()`로 포털 공개 파일

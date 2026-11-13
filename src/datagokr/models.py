@@ -139,8 +139,8 @@ class PublicParkingLot(StandardItem):
     longitude: float | None = None
     pwdbs_ppk_zone_yn: str | None = Field(default=None, alias="pwdbsPpkZoneYn")
     reference_date: date | None = Field(default=None, alias="referenceDate")
-    instt_code: str | None = None
-    instt_nm: str | None = None
+    instt_code: str | None = Field(default=None, alias="insttCode")
+    instt_nm: str | None = Field(default=None, alias="insttNm")
 
     @field_validator(
         "prkcmprt",
